@@ -32,7 +32,7 @@
         }
         canvas {
             width: 100%; height: 100%; object-fit: contain;
-            display: none; /* 初始隐藏，加载图片后显示 */
+            display: none;
         }
         .placeholder {
             color: #555; font-size: 16px; text-align: center;
@@ -169,7 +169,7 @@
             temp: 0,
             tint: 0
         };
-        let autoWBGains = null; // { rGain, gGain, bGain }
+        let autoWBGains = null;
 
         // ========== 模式切换 ==========
         modeColorBtn.addEventListener('click', () => {
@@ -201,12 +201,9 @@
                 const img = new Image();
                 img.onload = () => {
                     originalImage = img;
-                    // 重置调整参数
                     adjustments = { exposure:0, contrast:0, temp:0, tint:0 };
                     updateSlidersUI();
-                    // 自动去色罩（加载后直接处理）
                     autoWhiteBalanceAndProcess();
-                    // 显示 canvas，隐藏占位文字
                     canvas.style.display = 'block';
                     placeholder.style.display = 'none';
                 };
@@ -239,7 +236,7 @@
                 data[i + 2] = 255 - data[i + 2];
             }
             
-            // 2. 色彩校正（彩色/黑白）
+            // 2. 色彩校正
             if (currentMode === 'color') {
                 applyColorCorrection(data);
             } else {
@@ -283,33 +280,85 @@
             autoLevels(data);
         }
 
+        // ★★★ 新版混合白平衡（专门针对蓝色/青蓝色罩） ★★★
         function computeAutoWB(data) {
-            const luminances = [];
+            const totalPx = data.length / 4;
+            
+            // ---- 灰色世界：全图平均应为中性灰 ----
+            let sumR = 0, sumG = 0, sumB = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                sumR += data[i];
+                sumG += data[i + 1];
+                sumB += data[i + 2];
+            }
+            const avgR = sumR / totalPx;
+            const avgG = sumG / totalPx;
+            const avgB = sumB / totalPx;
+            const grayWorld = (avgR + avgG + avgB) / 3;
+            let rGainGW = grayWorld / avgR;
+            let gGainGW = grayWorld / avgG;
+            let bGainGW = grayWorld / avgB;
+            
+            // ---- 中灰锚点：亮度在 40%-60% 的像素集 ----
+            const midPixels = [];
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i+1], b = data[i+2];
                 const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                luminances.push({r, g, b, lum});
+                if (lum > 102 && lum < 153) {
+                    midPixels.push({r, g, b});
+                }
             }
-            luminances.sort((a, b) => b.lum - a.lum);
-            const count = Math.max(1, Math.floor(luminances.length * 0.01));
-            let sumR = 0, sumG = 0, sumB = 0;
-            for (let i = 0; i < count; i++) {
-                sumR += luminances[i].r;
-                sumG += luminances[i].g;
-                sumB += luminances[i].b;
+            let rGainMid = rGainGW, gGainMid = gGainGW, bGainMid = bGainGW;
+            if (midPixels.length > 100) {
+                let mr = 0, mg = 0, mb = 0;
+                midPixels.forEach(p => { mr += p.r; mg += p.g; mb += p.b; });
+                mr /= midPixels.length; mg /= midPixels.length; mb /= midPixels.length;
+                const midGray = (mr + mg + mb) / 3;
+                if (mr > 0 && mg > 0 && mb > 0) {
+                    rGainMid = midGray / mr;
+                    gGainMid = midGray / mg;
+                    bGainMid = midGray / mb;
+                }
             }
-            const avgR = sumR / count;
-            const avgG = sumG / count;
-            const avgB = sumB / count;
-            const maxAvg = Math.max(avgR, avgG, avgB);
-            if (maxAvg === 0) return { rGain: 1, gGain: 1, bGain: 1 };
+            
+            // ---- 镜面高光：最亮的 0.5% 应为白色 ----
+            const allPixels = [];
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i+1], b = data[i+2];
+                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                allPixels.push({r, g, b, lum});
+            }
+            allPixels.sort((a, b) => b.lum - a.lum);
+            const highlightCount = Math.max(1, Math.floor(totalPx * 0.005));
+            let hsR = 0, hsG = 0, hsB = 0;
+            for (let i = 0; i < highlightCount; i++) {
+                hsR += allPixels[i].r;
+                hsG += allPixels[i].g;
+                hsB += allPixels[i].b;
+            }
+            hsR /= highlightCount; hsG /= highlightCount; hsB /= highlightCount;
+            const maxHL = Math.max(hsR, hsG, hsB);
+            let rGainHL = maxHL / hsR;
+            let gGainHL = maxHL / hsG;
+            let bGainHL = maxHL / hsB;
+            if (!isFinite(rGainHL)) rGainHL = 1;
+            if (!isFinite(gGainHL)) gGainHL = 1;
+            if (!isFinite(bGainHL)) bGainHL = 1;
+            
+            // 混合：中灰 50%，灰色世界 10%，高光 40%
+            const rGain = rGainMid * 0.5 + rGainGW * 0.1 + rGainHL * 0.4;
+            const gGain = gGainMid * 0.5 + gGainGW * 0.1 + gGainHL * 0.4;
+            const bGain = bGainMid * 0.5 + bGainGW * 0.1 + bGainHL * 0.4;
+            
+            const clampGain = (v) => Math.min(2.5, Math.max(0.4, v));
             return {
-                rGain: maxAvg / avgR,
-                gGain: maxAvg / avgG,
-                bGain: maxAvg / avgB
+                rGain: clampGain(rGain),
+                gGain: clampGain(gGain),
+                bGain: clampGain(bGain)
             };
         }
 
+        // 自动色阶（更保守的裁剪，减少色阶断裂）
         function autoLevels(data) {
             const histogram = new Array(256).fill(0);
             for (let i = 0; i < data.length; i += 4) {
@@ -319,8 +368,8 @@
             let lowCut = 0, highCut = 255;
             let cumulative = 0;
             const total = data.length / 4;
-            const lowThreshold = total * 0.005;
-            const highThreshold = total * 0.995;
+            const lowThreshold = total * 0.002;
+            const highThreshold = total * 0.998;
             
             for (let i = 0; i < 256; i++) {
                 cumulative += histogram[i];
@@ -355,19 +404,16 @@
             for (let i = 0; i < data.length; i += 4) {
                 let r = data[i], g = data[i+1], b = data[i+2];
                 
-                // 曝光
                 r = Math.min(255, Math.max(0, r * (1 + expFactor)));
                 g = Math.min(255, Math.max(0, g * (1 + expFactor)));
                 b = Math.min(255, Math.max(0, b * (1 + expFactor)));
                 
-                // 对比度
                 if (contFactor !== 0) {
                     r = ((r / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
                     g = ((g / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
                     b = ((b / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
                 }
                 
-                // 色温与色调（仅彩色）
                 if (currentMode === 'color') {
                     r = Math.min(255, Math.max(0, r + tempShift * 0.5));
                     b = Math.min(255, Math.max(0, b - tempShift * 0.5));
@@ -403,7 +449,6 @@
             const x = Math.floor((e.clientX - rect.left) * scaleX);
             const y = Math.floor((e.clientY - rect.top) * scaleY);
             
-            // 重新读取原始图片的反相像素（不受当前处理影响）
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = originalImage.width;
             tempCanvas.height = originalImage.height;
@@ -478,12 +523,10 @@
             processImage();
         });
 
-        // ========== 窗口大小变化时重绘 ==========
         window.addEventListener('resize', () => {
             if (originalImage) processImage();
         });
 
-        // Auto 按钮
         autoBtn.addEventListener('click', autoWhiteBalanceAndProcess);
     </script>
 </body>
