@@ -32,11 +32,12 @@
         }
         canvas {
             width: 100%; height: 100%; object-fit: contain;
-            display: block;
+            display: none; /* 初始隐藏，加载图片后显示 */
         }
         .placeholder {
             color: #555; font-size: 16px; text-align: center;
             padding: 20px;
+            display: block;
         }
         .btn-row {
             display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
@@ -50,6 +51,7 @@
         button:active { background: #3a3a3a; }
         button.primary { background: #d4af37; color: #000; border-color: #d4af37; font-weight: bold; }
         button.small { padding: 6px 12px; font-size: 13px; }
+        button.active { background: #d4af37; color: #000; }
         .slider-group {
             display: flex; flex-direction: column; gap: 8px;
             background: #1a1a1a; padding: 12px; border-radius: 12px;
@@ -137,7 +139,6 @@
         // ========== DOM 元素 ==========
         const canvas = document.getElementById('previewCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const imageArea = document.getElementById('imageArea');
         const placeholder = document.getElementById('placeholder');
         const fileInput = document.getElementById('fileInput');
         const modeColorBtn = document.getElementById('modeColor');
@@ -159,17 +160,15 @@
         const tintVal = document.getElementById('tintVal');
 
         // ========== 状态变量 ==========
-        let originalImage = null;          // 原始上传的 Image 对象
-        let currentMode = 'color';        // 'color' | 'bw'
-        let isPickingGray = false;        // 是否处于灰点拾取模式
-        // 手动调整参数（叠加在自动处理之上）
+        let originalImage = null;
+        let currentMode = 'color';
+        let isPickingGray = false;
         let adjustments = {
-            exposure: 0,    // -100..100
-            contrast: 0,    // -50..50
-            temp: 0,        // -50..50
-            tint: 0         // -50..50
+            exposure: 0,
+            contrast: 0,
+            temp: 0,
+            tint: 0
         };
-        // 自动白平衡计算的增益（用于灰点拾取覆盖）
         let autoWBGains = null; // { rGain, gGain, bGain }
 
         // ========== 模式切换 ==========
@@ -205,8 +204,10 @@
                     // 重置调整参数
                     adjustments = { exposure:0, contrast:0, temp:0, tint:0 };
                     updateSlidersUI();
-                    // 自动去色罩（如果第一次加载）
+                    // 自动去色罩（加载后直接处理）
                     autoWhiteBalanceAndProcess();
+                    // 显示 canvas，隐藏占位文字
+                    canvas.style.display = 'block';
                     placeholder.style.display = 'none';
                 };
                 img.src = ev.target.result;
@@ -218,7 +219,6 @@
         function processImage() {
             if (!originalImage) return;
             
-            // 设置 canvas 尺寸保持原图比例，但限制最大宽度
             const maxW = 800;
             let w = originalImage.width, h = originalImage.height;
             if (w > maxW) {
@@ -228,71 +228,61 @@
             canvas.width = w;
             canvas.height = h;
             
-            // 第一步：绘制原图并获取像素数据
             ctx.drawImage(originalImage, 0, 0, w, h);
             const imageData = ctx.getImageData(0, 0, w, h);
             const data = imageData.data;
             
-            // 第二步：反相（负片 -> 正片）
+            // 1. 反相
             for (let i = 0; i < data.length; i += 4) {
-                data[i]     = 255 - data[i];     // R
-                data[i + 1] = 255 - data[i + 1]; // G
-                data[i + 2] = 255 - data[i + 2]; // B
-                // Alpha 不变
+                data[i]     = 255 - data[i];
+                data[i + 1] = 255 - data[i + 1];
+                data[i + 2] = 255 - data[i + 2];
             }
             
-            // 第三步：根据模式进行色彩校正
+            // 2. 色彩校正（彩色/黑白）
             if (currentMode === 'color') {
                 applyColorCorrection(data);
             } else {
                 applyBWCorrection(data);
             }
             
-            // 第四步：应用手动调整（曝光、对比度、色温/色调）
+            // 3. 手动调整
             applyManualAdjustments(data);
             
-            // 写回 canvas
             ctx.putImageData(imageData, 0, 0);
         }
 
         function applyColorCorrection(data) {
-            // 如果已经有灰点校正增益，使用它；否则用自动白平衡
             let rGain, gGain, bGain;
             if (autoWBGains) {
                 rGain = autoWBGains.rGain;
                 gGain = autoWBGains.gGain;
                 bGain = autoWBGains.bGain;
             } else {
-                // 自动白平衡：基于最亮像素
                 const gains = computeAutoWB(data);
                 rGain = gains.rGain;
                 gGain = gains.gGain;
                 bGain = gains.bGain;
-                autoWBGains = gains; // 保存，供灰点覆盖
+                autoWBGains = gains;
             }
             
-            // 应用白平衡
             for (let i = 0; i < data.length; i += 4) {
                 data[i]     = Math.min(255, data[i] * rGain);
                 data[i + 1] = Math.min(255, data[i + 1] * gGain);
                 data[i + 2] = Math.min(255, data[i + 2] * bGain);
             }
             
-            // 自动色阶拉伸（提高对比度）
             autoLevels(data);
         }
 
         function applyBWCorrection(data) {
-            // 转换为灰度
             for (let i = 0; i < data.length; i += 4) {
                 const gray = 0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2];
                 data[i] = data[i+1] = data[i+2] = gray;
             }
-            // 自动色阶拉伸
             autoLevels(data);
         }
 
-        // 自动白平衡：取画面最亮的前 1% 像素，假设它们应为白色
         function computeAutoWB(data) {
             const luminances = [];
             for (let i = 0; i < data.length; i += 4) {
@@ -320,7 +310,6 @@
             };
         }
 
-        // 自动色阶：将最暗的 0.5% 映射为 0，最亮的 0.5% 映射为 255
         function autoLevels(data) {
             const histogram = new Array(256).fill(0);
             for (let i = 0; i < data.length; i += 4) {
@@ -357,32 +346,31 @@
             }
         }
 
-        // 手动曝光、对比度、色温/色调调整
         function applyManualAdjustments(data) {
-            const expFactor = adjustments.exposure / 100 * 0.8; // -0.8 ~ +0.8 倍系数
-            const contFactor = adjustments.contrast / 50;        // -1 ~ 1
-            const tempShift = adjustments.temp / 50 * 30;       // -30 ~ 30
+            const expFactor = adjustments.exposure / 100 * 0.8;
+            const contFactor = adjustments.contrast / 50;
+            const tempShift = adjustments.temp / 50 * 30;
             const tintShift = adjustments.tint / 50 * 30;
 
             for (let i = 0; i < data.length; i += 4) {
                 let r = data[i], g = data[i+1], b = data[i+2];
+                
                 // 曝光
                 r = Math.min(255, Math.max(0, r * (1 + expFactor)));
                 g = Math.min(255, Math.max(0, g * (1 + expFactor)));
                 b = Math.min(255, Math.max(0, b * (1 + expFactor)));
                 
-                // 对比度 (围绕 128 拉伸)
+                // 对比度
                 if (contFactor !== 0) {
                     r = ((r / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
                     g = ((g / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
                     b = ((b / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
                 }
                 
-                // 色温：调整蓝-黄平衡（蓝色通道）
+                // 色温与色调（仅彩色）
                 if (currentMode === 'color') {
                     r = Math.min(255, Math.max(0, r + tempShift * 0.5));
                     b = Math.min(255, Math.max(0, b - tempShift * 0.5));
-                    // 色调：调整绿-品红平衡
                     g = Math.min(255, Math.max(0, g + tintShift * 0.5));
                     r = Math.min(255, Math.max(0, r - tintShift * 0.25));
                     b = Math.min(255, Math.max(0, b - tintShift * 0.25));
@@ -394,9 +382,8 @@
             }
         }
 
-        // 一键去色罩（丢弃灰点手动校正，重新自动计算）
         function autoWhiteBalanceAndProcess() {
-            autoWBGains = null; // 重置灰点增益，用自动
+            autoWBGains = null;
             processImage();
         }
 
@@ -416,9 +403,7 @@
             const x = Math.floor((e.clientX - rect.left) * scaleX);
             const y = Math.floor((e.clientY - rect.top) * scaleY);
             
-            // 获取点击位置的像素（当前 canvas 上是已经反相并校正后的图像吗？不应该）
-            // 我们需要从原图反相后、未校色的状态取像素。简便起见，重新绘制原图并取反相像素。
-            // 这里重新渲染一次临时 canvas 获取反相像素
+            // 重新读取原始图片的反相像素（不受当前处理影响）
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = originalImage.width;
             tempCanvas.height = originalImage.height;
@@ -430,7 +415,6 @@
             let g = 255 - imgData.data[idx+1];
             let b = 255 - imgData.data[idx+2];
             
-            // 计算灰点增益：使得该点变为中性灰 (取 G 为基准或亮度为基准)
             const gray = (r + g + b) / 3;
             if (gray === 0) return;
             autoWBGains = {
@@ -499,17 +483,8 @@
             if (originalImage) processImage();
         });
 
-        // 初始化占位符
-        placeholder.style.display = 'block';
-        canvas.style.display = 'none';
-        // 当有图片时显示 canvas
-        const observer = new MutationObserver(() => {
-            if (originalImage) {
-                canvas.style.display = 'block';
-                placeholder.style.display = 'none';
-            }
-        });
-        observer.observe(imageArea, { childList: true, subtree: true });
+        // Auto 按钮
+        autoBtn.addEventListener('click', autoWhiteBalanceAndProcess);
     </script>
 </body>
 </html>
