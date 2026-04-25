@@ -3,108 +3,441 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>胶片测光表</title>
-    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22胶片测光表%22%2C%22short_name%22%3A%22测光表%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000%22%2C%22theme_color%22%3A%22%23d4af37%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%20100'%3E%3Ccircle%20cx%3D'50'%20cy%3D'50'%20r%3D'45'%20fill%3D'%23d4af37'%2F%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22100x100%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+    <title>胶片测光表 · 优先模式</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            background: #0a0a0a;
-            color: #d4af37;
+            background: #0a0a0a; color: #d4af37;
             font-family: 'Courier New', monospace;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
+            height: 100dvh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            overflow: hidden; touch-action: manipulation;
+            user-select: none; -webkit-user-select: none;
         }
         #viewfinder {
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            aspect-ratio: 4/3;
-            background: #1a1a1a;
-            border-radius: 12px;
-            overflow: hidden;
+            position: relative; width: 100%; max-width: 400px;
+            aspect-ratio: 4/3; background: #1a1a1a;
+            border-radius: 12px; overflow: hidden;
             border: 2px solid #333;
             box-shadow: 0 0 30px rgba(212,175,55,0.2);
         }
         video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            width: 100%; height: 100%; object-fit: cover;
             filter: saturate(0.3) contrast(1.1);
         }
         .overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            pointer-events: none;
-            padding: 10px;
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            pointer-events: none; display: flex; flex-direction: column;
+            justify-content: space-between; padding: 10px;
         }
         .ev-display {
-            font-size: 42px;
-            font-weight: bold;
-            text-align: center;
+            font-size: 38px; font-weight: bold; text-align: center;
             text-shadow: 0 0 10px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.5);
-            border-radius: 8px;
-            padding: 2px 12px;
-            align-self: center;
+            background: rgba(0,0,0,0.5); border-radius: 8px;
+            padding: 2px 12px; align-self: center;
         }
         .info-bar {
-            display: flex;
-            justify-content: space-between;
-            font-size: 16px;
-            font-weight: bold;
+            display: flex; justify-content: space-between;
+            font-size: 16px; font-weight: bold;
             text-shadow: 0 0 8px black;
-            background: rgba(0,0,0,0.6);
-            border-radius: 6px;
+            background: rgba(0,0,0,0.6); border-radius: 6px;
             padding: 4px 10px;
         }
         .meter-zone {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 80px;
+            position: absolute; top:50%; left:50%;
+            transform: translate(-50%,-50%);
+            width: 80px; height: 80px;
             border: 2px dashed rgba(255,255,255,0.6);
-            border-radius: 50%;
-            pointer-events: none;
+            border-radius: 50%; pointer-events: none;
             box-shadow: 0 0 15px rgba(255,255,200,0.3);
         }
         .controls {
-            width: 100%;
-            max-width: 400px;
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            align-items: center;
+            width: 100%; max-width: 400px; margin-top: 12px;
+            display: flex; flex-direction: column; gap: 10px;
         }
-        .iso-selector {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: #1a1a1a;
-            padding: 8px 16px;
-            border-radius: 30px;
-            border: 1px solid #444;
+        .mode-tabs {
+            display: flex; gap: 6px; justify-content: center;
         }
-        .iso-btn {
-            background: #2a2a2a;
-            border: none;
-            color: #d4af37;
-            font-size: 22px;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+        .mode-btn {
+            background: #1a1a1a; border: 1px solid #444;
+            color: #888; padding: 6px 16px; border-radius: 20px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background: #d4af37; color: #000; border-color: #d4af37;
+        }
+        .param-row {
+            display: flex; align-items: center; justify-content: center;
+            gap: 14px; background: #1a1a1a;
+            padding: 8px 16px; border-radius: 30px; border: 1px solid #444;
+        }
+        .param-label {
+            font-size: 14px; color: #888; width: 40px; text-align: center;
+        }
+        .adj-btn {
+            background: #2a2a2a; border: none; color: #d4af37;
+            font-size: 20px; width: 34px; height: 34px;
+            border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .param-value {
+            font-size: 20px; font-weight: bold; width: 70px; text-align: center;
+        }
+        .param-value.editable {
+            color: #fff; background: #333; border-radius: 6px; padding: 2px 0;
+        }
+        .iso-row {
+            display: flex; align-items: center; justify-content: center;
+            gap: 14px; background: #1a1a1a;
+            padding: 6px 16px; border-radius: 30px; border: 1px solid #444;
+        }
+        .lock-btn {
+            background: #2a2a2a; border: 1px solid #d4af37;
+            color: #d4af37; padding: 8px 20px; border-radius: 30px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            transition: all 0.2s; align-self: center;
+        }
+        .lock-btn.active {
+            background: #d4af37; color: #000;
+        }
+        .warning {
+            color: #ff7777; font-size: 11px; text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewfinder">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="overlay">
+            <div class="ev-display" id="evValue">--</div>
+            <div class="info-bar">
+                <span id="shutterDisplay">1/125</span>
+                <span id="apertureDisplay">f/5.6</span>
+            </div>
+        </div>
+        <div class="meter-zone"></div>
+    </div>
+    <div class="controls">
+        <!-- 模式切换 -->
+        <div class="mode-tabs">
+            <button class="mode-btn active" id="modeAuto">AUTO</button>
+            <button class="mode-btn" id="modeA">A</button>
+            <button class="mode-btn" id="modeS">S</button>
+        </div>
+        <!-- 光圈调节行（A模式或Auto显示） -->
+        <div class="param-row" id="apertureRow">
+            <span class="param-label">光圈</span>
+            <button class="adj-btn" id="apertureDown">−</button>
+            <span class="param-value editable" id="apertureMain">f/5.6</span>
+            <button class="adj-btn" id="apertureUp">+</button>
+        </div>
+        <!-- 快门调节行（S模式或Auto显示） -->
+        <div class="param-row" id="shutterRow">
+            <span class="param-label">快门</span>
+            <button class="adj-btn" id="shutterDown">−</button>
+            <span class="param-value editable" id="shutterMain">1/125</span>
+            <button class="adj-btn" id="shutterUp">+</button>
+        </div>
+        <!-- ISO 调节 -->
+        <div class="iso-row">
+            <span class="param-label">ISO</span>
+            <button class="adj-btn" id="isoDown">−</button>
+            <span class="param-value" id="isoDisplay">400</span>
+            <button class="adj-btn" id="isoUp">+</button>
+        </div>
+        <button class="lock-btn" id="lockBtn">🔒 AE-L</button>
+    </div>
+    <div class="warning" id="warning"></div>
+
+    <script>
+        // ==================== 数据定义 ====================
+        const isoValues = [25,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400];
+        const shutterStops = [1/4000,1/2000,1/1000,1/500,1/250,1/125,1/60,1/30,1/15,1/8,1/4,1/2,1,2,4,8,15,30];
+        const apertureStops = [1.0,1.4,2.0,2.8,4.0,5.6,8,11,16,22,32,45];
+
+        // 当前状态
+        let currentISO = 400;
+        let currentEV = null;
+        let locked = false;
+        let lockedEV = null;
+        let mode = 'AUTO';            // 'AUTO' | 'A' | 'S'
+        let selectedAperture = 5.6;   // 当前选中的光圈（A模式时用户调节）
+        let selectedShutter = 1/125;  // 当前选中的快门（S模式时用户调节）
+
+        // 相机流
+        let stream = null;
+        let animationId = null;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // DOM
+        const video = document.getElementById('video');
+        const evValueEl = document.getElementById('evValue');
+        const shutterDisplay = document.getElementById('shutterDisplay');
+        const apertureDisplay = document.getElementById('apertureDisplay');
+        const shutterMain = document.getElementById('shutterMain');
+        const apertureMain = document.getElementById('apertureMain');
+        const isoDisplay = document.getElementById('isoDisplay');
+        const lockBtn = document.getElementById('lockBtn');
+        const warningEl = document.getElementById('warning');
+
+        // 模式按钮
+        const modeAutoBtn = document.getElementById('modeAuto');
+        const modeABtn = document.getElementById('modeA');
+        const modeSBtn = document.getElementById('modeS');
+
+        // 调节按钮
+        const apertureUpBtn = document.getElementById('apertureUp');
+        const apertureDownBtn = document.getElementById('apertureDown');
+        const shutterUpBtn = document.getElementById('shutterUp');
+        const shutterDownBtn = document.getElementById('shutterDown');
+        const isoUpBtn = document.getElementById('isoUp');
+        const isoDownBtn = document.getElementById('isoDown');
+
+        // ==================== 辅助函数 ====================
+        function formatShutter(s) {
+            if (s >= 1) return s + '"';
+            return '1/' + Math.round(1/s);
+        }
+
+        function formatAperture(f) {
+            return 'f/' + f.toFixed(1);
+        }
+
+        // 从数组中找最近的索引值
+        function closestIndex(arr, val) {
+            let minDist = Infinity, idx = 0;
+            arr.forEach((v,i) => {
+                const d = Math.abs(v - val);
+                if (d < minDist) { minDist = d; idx = i; }
+            });
+            return idx;
+        }
+
+        // ==================== 核心计算逻辑 ====================
+        function calcEVFromLuminance(luminance) {
+            // 同之前校准公式
+            const normalized = luminance / 255;
+            if (normalized <= 0) return null;
+            return Math.log2(normalized * 1000) + 3.2;
+        }
+
+        function measureEV() {
+            if (!stream || video.readyState < 2) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const centerX = Math.floor(canvas.width * 0.375);
+            const centerY = Math.floor(canvas.height * 0.375);
+            const sampleW = Math.floor(canvas.width * 0.25);
+            const sampleH = Math.floor(canvas.height * 0.25);
+            const imageData = ctx.getImageData(centerX, centerY, sampleW, sampleH);
+            const data = imageData.data;
+            let totalLuminance = 0, pixelCount = 0;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i+1], b = data[i+2];
+                totalLuminance += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                pixelCount++;
+            }
+            const avg = totalLuminance / pixelCount;
+            currentEV = calcEVFromLuminance(avg);
+        }
+
+        // 根据当前模式与EV计算应显示的曝光组合
+        function computeExposure() {
+            const ev = locked ? lockedEV : currentEV;
+            if (ev === null || ev === undefined) return null;
+
+            const isoFactor = Math.log2(currentISO / 100);
+            const targetN2OverT = Math.pow(2, ev + isoFactor);
+
+            if (mode === 'AUTO') {
+                // 自动模式：找最均衡的光圈/快门组合
+                let bestF = apertureStops[0], bestT = shutterStops[0], minDiff = Infinity;
+                for (let f of apertureStops) {
+                    const t = (f * f) / targetN2OverT;
+                    const closestT = shutterStops.reduce((prev, curr) => {
+                        return Math.abs(curr - t) < Math.abs(prev - t) ? curr : prev;
+                    });
+                    const diff = Math.abs(closestT - t) / t;
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        bestF = f;
+                        bestT = closestT;
+                    }
+                }
+                return { aperture: bestF, shutter: bestT };
+            } else if (mode === 'A') {
+                // 光圈优先：用当前选定光圈算快门
+                const t = (selectedAperture * selectedAperture) / targetN2OverT;
+                const closestT = shutterStops.reduce((prev, curr) => {
+                    return Math.abs(curr - t) < Math.abs(prev - t) ? curr : prev;
+                });
+                return { aperture: selectedAperture, shutter: closestT };
+            } else if (mode === 'S') {
+                // 快门优先：用当前选定快门算光圈
+                const f = Math.sqrt(targetN2OverT * selectedShutter);
+                const closestF = apertureStops.reduce((prev, curr) => {
+                    return Math.abs(curr - f) < Math.abs(prev - f) ? curr : prev;
+                });
+                return { aperture: closestF, shutter: selectedShutter };
+            }
+        }
+
+        function updateDisplay() {
+            const ev = locked ? lockedEV : currentEV;
+            evValueEl.textContent = ev !== null ? ev.toFixed(1) + ' EV' : '--';
+
+            const exposure = computeExposure();
+            if (exposure) {
+                shutterDisplay.textContent = formatShutter(exposure.shutter);
+                apertureDisplay.textContent = formatAperture(exposure.aperture);
+                shutterMain.textContent = formatShutter(exposure.shutter);
+                apertureMain.textContent = formatAperture(exposure.aperture);
+                // 更新选中状态（AUTO模式下同步用户调节的起点）
+                if (mode === 'AUTO') {
+                    selectedAperture = exposure.aperture;
+                    selectedShutter = exposure.shutter;
+                }
+                // 高亮当前可调节的参数
+                if (mode === 'A') {
+                    apertureMain.style.color = '#fff';
+                    shutterMain.style.color = '#d4af37';
+                } else if (mode === 'S') {
+                    apertureMain.style.color = '#d4af37';
+                    shutterMain.style.color = '#fff';
+                } else {
+                    apertureMain.style.color = '#d4af37';
+                    shutterMain.style.color = '#d4af37';
+                }
+            }
+            isoDisplay.textContent = currentISO;
+        }
+
+        // ==================== 模式切换 ====================
+        function setMode(newMode) {
+            mode = newMode;
+            // 按钮状态
+            modeAutoBtn.classList.toggle('active', mode === 'AUTO');
+            modeABtn.classList.toggle('active', mode === 'A');
+            modeSBtn.classList.toggle('active', mode === 'S');
+            // 当进入 A 或 S 模式时，用当前曝光值初始化选中参数
+            const exposure = computeExposure();
+            if (exposure) {
+                selectedAperture = exposure.aperture;
+                selectedShutter = exposure.shutter;
+            }
+            updateDisplay();
+        }
+
+        modeAutoBtn.addEventListener('click', () => setMode('AUTO'));
+        modeABtn.addEventListener('click', () => setMode('A'));
+        modeSBtn.addEventListener('click', () => setMode('S'));
+
+        // ==================== 参数调节 ====================
+        // 光圈调节（仅在 A 模式有效）
+        function changeAperture(delta) {
+            if (mode === 'S') return; // S模式下不允许手动调光圈
+            const idx = closestIndex(apertureStops, selectedAperture);
+            const newIdx = Math.min(apertureStops.length-1, Math.max(0, idx + delta));
+            selectedAperture = apertureStops[newIdx];
+            if (mode === 'AUTO') {
+                // 在自动模式下调节光圈，自动切换到光圈优先
+                setMode('A');
+            }
+            updateDisplay();
+        }
+
+        // 快门调节（仅在 S 模式有效）
+        function changeShutter(delta) {
+            if (mode === 'A') return; // A模式下不允许手动调快门
+            const idx = closestIndex(shutterStops, selectedShutter);
+            const newIdx = Math.min(shutterStops.length-1, Math.max(0, idx + delta));
+            selectedShutter = shutterStops[newIdx];
+            if (mode === 'AUTO') {
+                setMode('S');
+            }
+            updateDisplay();
+        }
+
+        apertureUpBtn.addEventListener('click', () => changeAperture(1));
+        apertureDownBtn.addEventListener('click', () => changeAperture(-1));
+        shutterUpBtn.addEventListener('click', () => changeShutter(1));
+        shutterDownBtn.addEventListener('click', () => changeShutter(-1));
+
+        // ISO 调节
+        isoUpBtn.addEventListener('click', () => {
+            const idx = isoValues.indexOf(currentISO);
+            if (idx < isoValues.length-1) currentISO = isoValues[idx+1];
+            if (locked) locked = false;
+            updateDisplay();
+        });
+        isoDownBtn.addEventListener('click', () => {
+            const idx = isoValues.indexOf(currentISO);
+            if (idx > 0) currentISO = isoValues[idx-1];
+            if (locked) locked = false;
+            updateDisplay();
+        });
+
+        // AE-L 锁定
+        lockBtn.addEventListener('click', () => {
+            if (locked) {
+                locked = false; lockedEV = null;
+                lockBtn.textContent = '🔒 AE-L';
+                lockBtn.classList.remove('active');
+            } else {
+                locked = true; lockedEV = currentEV;
+                lockBtn.textContent = '🔓 AE-L (锁定)';
+                lockBtn.classList.add('active');
+            }
+            updateDisplay();
+        });
+        document.getElementById('viewfinder').addEventListener('click', () => lockBtn.click());
+
+        // ==================== 摄像头启动 ====================
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', aspectRatio: 4/3, width: { ideal: 320 }, height: { ideal: 240 } },
+                    audio: false
+                });
+                video.srcObject = stream;
+                await video.play();
+                warningEl.textContent = '';
+                startMetering();
+            } catch (err) {
+                warningEl.textContent = '摄像头不可用，使用模拟数据';
+                simulateMetering();
+            }
+        }
+
+        function simulateMetering() {
+            setInterval(() => {
+                if (!locked) {
+                    currentEV = Math.round((10 + Math.random() * 6) * 10) / 10;
+                    updateDisplay();
+                }
+            }, 500);
+        }
+
+        function startMetering() {
+            function loop() {
+                if (!locked) measureEV();
+                updateDisplay();
+                animationId = requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        initCamera();
+        window.addEventListener('beforeunload', () => {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            if (animationId) cancelAnimationFrame(animationId);
+        });
+    </script>
+</body>
+</html>            border-radius: 50%;
             cursor: pointer;
             display: flex;
             align-items: center;
