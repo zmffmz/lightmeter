@@ -2,58 +2,70 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>胶片测光表 · 优先模式</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>胶片去色罩 · 负片反转校正</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            background: #0a0a0a; color: #d4af37;
-            font-family: 'Courier New', monospace;
-            height: 100dvh; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            overflow: hidden; touch-action: manipulation;
+            background: #0a0a0a; color: #ccc;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100dvh;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 12px;
+            touch-action: manipulation;
             user-select: none; -webkit-user-select: none;
         }
-        #viewfinder {
-            position: relative; width: 100%; max-width: 400px;
-            aspect-ratio: 4/3; background: #1a1a1a;
-            border-radius: 12px; overflow: hidden;
-            border: 2px solid #333;
-            box-shadow: 0 0 30px rgba(212,175,55,0.2);
+        h1 {
+            font-size: 20px; color: #d4af37; margin-bottom: 8px;
+            letter-spacing: 1px;
         }
-        video {
-            width: 100%; height: 100%; object-fit: cover;
-            filter: saturate(0.3) contrast(1.1);
-        }
-        .overlay {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            pointer-events: none; display: flex; flex-direction: column;
-            justify-content: space-between; padding: 10px;
-        }
-        .ev-display {
-            font-size: 38px; font-weight: bold; text-align: center;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.5); border-radius: 8px;
-            padding: 2px 12px; align-self: center;
-        }
-        .info-bar {
-            display: flex; justify-content: space-between;
-            font-size: 16px; font-weight: bold;
-            text-shadow: 0 0 8px black;
-            background: rgba(0,0,0,0.6); border-radius: 6px;
-            padding: 4px 10px;
-        }
-        .meter-zone {
-            position: absolute; top:50%; left:50%;
-            transform: translate(-50%,-50%);
-            width: 80px; height: 80px;
-            border: 2px dashed rgba(255,255,255,0.6);
-            border-radius: 50%; pointer-events: none;
-            box-shadow: 0 0 15px rgba(255,255,200,0.3);
-        }
-        .controls {
-            width: 100%; max-width: 400px; margin-top: 12px;
+        .workspace {
             display: flex; flex-direction: column; gap: 10px;
+            width: 100%; max-width: 500px;
+        }
+        .image-area {
+            position: relative;
+            background: #1a1a1a; border: 2px solid #333;
+            border-radius: 12px; overflow: hidden;
+            aspect-ratio: 3/2;
+            display: flex; align-items: center; justify-content: center;
+        }
+        canvas {
+            width: 100%; height: 100%; object-fit: contain;
+            display: block;
+        }
+        .placeholder {
+            color: #555; font-size: 16px; text-align: center;
+            padding: 20px;
+        }
+        .btn-row {
+            display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+        }
+        button {
+            background: #2a2a2a; border: 1px solid #444;
+            color: #ddd; padding: 10px 18px; border-radius: 24px;
+            font-size: 15px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap;
+        }
+        button:active { background: #3a3a3a; }
+        button.primary { background: #d4af37; color: #000; border-color: #d4af37; font-weight: bold; }
+        button.small { padding: 6px 12px; font-size: 13px; }
+        .slider-group {
+            display: flex; flex-direction: column; gap: 8px;
+            background: #1a1a1a; padding: 12px; border-radius: 12px;
+            border: 1px solid #333;
+        }
+        .slider-item {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .slider-item label {
+            width: 50px; font-size: 14px; color: #aaa;
+        }
+        input[type=range] {
+            flex: 1; accent-color: #d4af37;
+        }
+        .slider-value {
+            width: 36px; font-size: 13px; text-align: right; color: #d4af37;
         }
         .mode-tabs {
             display: flex; gap: 6px; justify-content: center;
@@ -62,379 +74,442 @@
             background: #1a1a1a; border: 1px solid #444;
             color: #888; padding: 6px 16px; border-radius: 20px;
             font-size: 14px; font-weight: bold; cursor: pointer;
-            transition: all 0.2s;
         }
-        .mode-btn.active {
-            background: #d4af37; color: #000; border-color: #d4af37;
-        }
-        .param-row {
-            display: flex; align-items: center; justify-content: center;
-            gap: 14px; background: #1a1a1a;
-            padding: 8px 16px; border-radius: 30px; border: 1px solid #444;
-        }
-        .param-label {
-            font-size: 14px; color: #888; width: 40px; text-align: center;
-        }
-        .adj-btn {
-            background: #2a2a2a; border: none; color: #d4af37;
-            font-size: 20px; width: 34px; height: 34px;
-            border-radius: 50%; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .param-value {
-            font-size: 20px; font-weight: bold; width: 70px; text-align: center;
-        }
-        .param-value.editable {
-            color: #fff; background: #333; border-radius: 6px; padding: 2px 0;
-        }
-        .iso-row {
-            display: flex; align-items: center; justify-content: center;
-            gap: 14px; background: #1a1a1a;
-            padding: 6px 16px; border-radius: 30px; border: 1px solid #444;
-        }
-        .lock-btn {
-            background: #2a2a2a; border: 1px solid #d4af37;
-            color: #d4af37; padding: 8px 20px; border-radius: 30px;
-            font-size: 14px; font-weight: bold; cursor: pointer;
-            transition: all 0.2s; align-self: center;
-        }
-        .lock-btn.active {
-            background: #d4af37; color: #000;
-        }
-        .warning {
-            color: #ff7777; font-size: 11px; text-align: center;
+        .mode-btn.active { background: #d4af37; color: #000; border-color: #d4af37; }
+        .info-text {
+            font-size: 12px; color: #888; text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="viewfinder">
-        <video id="video" autoplay playsinline muted></video>
-        <div class="overlay">
-            <div class="ev-display" id="evValue">--</div>
-            <div class="info-bar">
-                <span id="shutterDisplay">1/125</span>
-                <span id="apertureDisplay">f/5.6</span>
+    <h1>🎞️ 胶片去色罩</h1>
+    <div class="workspace">
+        <!-- 模式选择 -->
+        <div class="mode-tabs">
+            <button class="mode-btn active" id="modeColor">彩色负片</button>
+            <button class="mode-btn" id="modeBW">黑白负片</button>
+        </div>
+
+        <!-- 图片显示区 -->
+        <div class="image-area" id="imageArea">
+            <canvas id="previewCanvas"></canvas>
+            <div class="placeholder" id="placeholder">点击按钮选择胶片扫描图</div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="btn-row">
+            <button id="uploadBtn">📁 选择图片</button>
+            <button id="autoBtn" class="primary">✨ 一键去色罩</button>
+            <button id="pickGrayBtn">🔘 点击灰点</button>
+            <button id="resetBtn">↩️ 恢复原图</button>
+            <button id="downloadBtn">💾 下载</button>
+        </div>
+
+        <!-- 手动微调滑块 -->
+        <div class="slider-group" id="sliderPanel">
+            <div class="slider-item">
+                <label>曝光</label>
+                <input type="range" id="exposure" min="-100" max="100" value="0" step="1">
+                <span class="slider-value" id="exposureVal">0</span>
+            </div>
+            <div class="slider-item">
+                <label>对比度</label>
+                <input type="range" id="contrast" min="-50" max="50" value="0" step="1">
+                <span class="slider-value" id="contrastVal">0</span>
+            </div>
+            <div class="slider-item" id="colorTempRow">
+                <label>色温</label>
+                <input type="range" id="temp" min="-50" max="50" value="0" step="1">
+                <span class="slider-value" id="tempVal">0</span>
+            </div>
+            <div class="slider-item" id="tintRow">
+                <label>色调</label>
+                <input type="range" id="tint" min="-50" max="50" value="0" step="1">
+                <span class="slider-value" id="tintVal">0</span>
             </div>
         </div>
-        <div class="meter-zone"></div>
+        <div class="info-text">支持 JPG/PNG，点「一键去色罩」自动处理</div>
     </div>
-    <div class="controls">
-        <!-- 模式切换 -->
-        <div class="mode-tabs">
-            <button class="mode-btn active" id="modeAuto">AUTO</button>
-            <button class="mode-btn" id="modeA">A</button>
-            <button class="mode-btn" id="modeS">S</button>
-        </div>
-        <!-- 光圈调节行（A模式或Auto显示） -->
-        <div class="param-row" id="apertureRow">
-            <span class="param-label">光圈</span>
-            <button class="adj-btn" id="apertureDown">−</button>
-            <span class="param-value editable" id="apertureMain">f/5.6</span>
-            <button class="adj-btn" id="apertureUp">+</button>
-        </div>
-        <!-- 快门调节行（S模式或Auto显示） -->
-        <div class="param-row" id="shutterRow">
-            <span class="param-label">快门</span>
-            <button class="adj-btn" id="shutterDown">−</button>
-            <span class="param-value editable" id="shutterMain">1/125</span>
-            <button class="adj-btn" id="shutterUp">+</button>
-        </div>
-        <!-- ISO 调节 -->
-        <div class="iso-row">
-            <span class="param-label">ISO</span>
-            <button class="adj-btn" id="isoDown">−</button>
-            <span class="param-value" id="isoDisplay">400</span>
-            <button class="adj-btn" id="isoUp">+</button>
-        </div>
-        <button class="lock-btn" id="lockBtn">🔒 AE-L</button>
-    </div>
-    <div class="warning" id="warning"></div>
+
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
 
     <script>
-        // ==================== 数据定义 ====================
-        const isoValues = [25,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400];
-        const shutterStops = [1/4000,1/2000,1/1000,1/500,1/250,1/125,1/60,1/30,1/15,1/8,1/4,1/2,1,2,4,8,15,30];
-        const apertureStops = [1.0,1.4,2.0,2.8,4.0,5.6,8,11,16,22,32,45];
-
-        // 当前状态
-        let currentISO = 400;
-        let currentEV = null;
-        let locked = false;
-        let lockedEV = null;
-        let mode = 'AUTO';            // 'AUTO' | 'A' | 'S'
-        let selectedAperture = 5.6;   // 当前选中的光圈（A模式时用户调节）
-        let selectedShutter = 1/125;  // 当前选中的快门（S模式时用户调节）
-
-        // 相机流
-        let stream = null;
-        let animationId = null;
-        const canvas = document.createElement('canvas');
+        // ========== DOM 元素 ==========
+        const canvas = document.getElementById('previewCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const imageArea = document.getElementById('imageArea');
+        const placeholder = document.getElementById('placeholder');
+        const fileInput = document.getElementById('fileInput');
+        const modeColorBtn = document.getElementById('modeColor');
+        const modeBWBtn = document.getElementById('modeBW');
+        const autoBtn = document.getElementById('autoBtn');
+        const pickGrayBtn = document.getElementById('pickGrayBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
 
-        // DOM
-        const video = document.getElementById('video');
-        const evValueEl = document.getElementById('evValue');
-        const shutterDisplay = document.getElementById('shutterDisplay');
-        const apertureDisplay = document.getElementById('apertureDisplay');
-        const shutterMain = document.getElementById('shutterMain');
-        const apertureMain = document.getElementById('apertureMain');
-        const isoDisplay = document.getElementById('isoDisplay');
-        const lockBtn = document.getElementById('lockBtn');
-        const warningEl = document.getElementById('warning');
+        // 滑块
+        const exposureSlider = document.getElementById('exposure');
+        const contrastSlider = document.getElementById('contrast');
+        const tempSlider = document.getElementById('temp');
+        const tintSlider = document.getElementById('tint');
+        const exposureVal = document.getElementById('exposureVal');
+        const contrastVal = document.getElementById('contrastVal');
+        const tempVal = document.getElementById('tempVal');
+        const tintVal = document.getElementById('tintVal');
 
-        // 模式按钮
-        const modeAutoBtn = document.getElementById('modeAuto');
-        const modeABtn = document.getElementById('modeA');
-        const modeSBtn = document.getElementById('modeS');
+        // ========== 状态变量 ==========
+        let originalImage = null;          // 原始上传的 Image 对象
+        let currentMode = 'color';        // 'color' | 'bw'
+        let isPickingGray = false;        // 是否处于灰点拾取模式
+        // 手动调整参数（叠加在自动处理之上）
+        let adjustments = {
+            exposure: 0,    // -100..100
+            contrast: 0,    // -50..50
+            temp: 0,        // -50..50
+            tint: 0         // -50..50
+        };
+        // 自动白平衡计算的增益（用于灰点拾取覆盖）
+        let autoWBGains = null; // { rGain, gGain, bGain }
 
-        // 调节按钮
-        const apertureUpBtn = document.getElementById('apertureUp');
-        const apertureDownBtn = document.getElementById('apertureDown');
-        const shutterUpBtn = document.getElementById('shutterUp');
-        const shutterDownBtn = document.getElementById('shutterDown');
-        const isoUpBtn = document.getElementById('isoUp');
-        const isoDownBtn = document.getElementById('isoDown');
+        // ========== 模式切换 ==========
+        modeColorBtn.addEventListener('click', () => {
+            currentMode = 'color';
+            modeColorBtn.classList.add('active');
+            modeBWBtn.classList.remove('active');
+            document.getElementById('colorTempRow').style.display = 'flex';
+            document.getElementById('tintRow').style.display = 'flex';
+            if (originalImage) processImage();
+        });
+        modeBWBtn.addEventListener('click', () => {
+            currentMode = 'bw';
+            modeBWBtn.classList.add('active');
+            modeColorBtn.classList.remove('active');
+            document.getElementById('colorTempRow').style.display = 'none';
+            document.getElementById('tintRow').style.display = 'none';
+            if (originalImage) processImage();
+        });
 
-        // ==================== 辅助函数 ====================
-        function formatShutter(s) {
-            if (s >= 1) return s + '"';
-            return '1/' + Math.round(1/s);
+        // ========== 图片加载 ==========
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    // 重置调整参数
+                    adjustments = { exposure:0, contrast:0, temp:0, tint:0 };
+                    updateSlidersUI();
+                    // 自动去色罩（如果第一次加载）
+                    autoWhiteBalanceAndProcess();
+                    placeholder.style.display = 'none';
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
-        function formatAperture(f) {
-            return 'f/' + f.toFixed(1);
-        }
-
-        // 从数组中找最近的索引值
-        function closestIndex(arr, val) {
-            let minDist = Infinity, idx = 0;
-            arr.forEach((v,i) => {
-                const d = Math.abs(v - val);
-                if (d < minDist) { minDist = d; idx = i; }
-            });
-            return idx;
-        }
-
-        // ==================== 核心计算逻辑 ====================
-        function calcEVFromLuminance(luminance) {
-            // 同之前校准公式
-            const normalized = luminance / 255;
-            if (normalized <= 0) return null;
-            return Math.log2(normalized * 1000) + 3.2;
-        }
-
-        function measureEV() {
-            if (!stream || video.readyState < 2) return;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const centerX = Math.floor(canvas.width * 0.375);
-            const centerY = Math.floor(canvas.height * 0.375);
-            const sampleW = Math.floor(canvas.width * 0.25);
-            const sampleH = Math.floor(canvas.height * 0.25);
-            const imageData = ctx.getImageData(centerX, centerY, sampleW, sampleH);
+        // ========== 核心图像处理 ==========
+        function processImage() {
+            if (!originalImage) return;
+            
+            // 设置 canvas 尺寸保持原图比例，但限制最大宽度
+            const maxW = 800;
+            let w = originalImage.width, h = originalImage.height;
+            if (w > maxW) {
+                h = Math.round(h * (maxW / w));
+                w = maxW;
+            }
+            canvas.width = w;
+            canvas.height = h;
+            
+            // 第一步：绘制原图并获取像素数据
+            ctx.drawImage(originalImage, 0, 0, w, h);
+            const imageData = ctx.getImageData(0, 0, w, h);
             const data = imageData.data;
-            let totalLuminance = 0, pixelCount = 0;
+            
+            // 第二步：反相（负片 -> 正片）
+            for (let i = 0; i < data.length; i += 4) {
+                data[i]     = 255 - data[i];     // R
+                data[i + 1] = 255 - data[i + 1]; // G
+                data[i + 2] = 255 - data[i + 2]; // B
+                // Alpha 不变
+            }
+            
+            // 第三步：根据模式进行色彩校正
+            if (currentMode === 'color') {
+                applyColorCorrection(data);
+            } else {
+                applyBWCorrection(data);
+            }
+            
+            // 第四步：应用手动调整（曝光、对比度、色温/色调）
+            applyManualAdjustments(data);
+            
+            // 写回 canvas
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function applyColorCorrection(data) {
+            // 如果已经有灰点校正增益，使用它；否则用自动白平衡
+            let rGain, gGain, bGain;
+            if (autoWBGains) {
+                rGain = autoWBGains.rGain;
+                gGain = autoWBGains.gGain;
+                bGain = autoWBGains.bGain;
+            } else {
+                // 自动白平衡：基于最亮像素
+                const gains = computeAutoWB(data);
+                rGain = gains.rGain;
+                gGain = gains.gGain;
+                bGain = gains.bGain;
+                autoWBGains = gains; // 保存，供灰点覆盖
+            }
+            
+            // 应用白平衡
+            for (let i = 0; i < data.length; i += 4) {
+                data[i]     = Math.min(255, data[i] * rGain);
+                data[i + 1] = Math.min(255, data[i + 1] * gGain);
+                data[i + 2] = Math.min(255, data[i + 2] * bGain);
+            }
+            
+            // 自动色阶拉伸（提高对比度）
+            autoLevels(data);
+        }
+
+        function applyBWCorrection(data) {
+            // 转换为灰度
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2];
+                data[i] = data[i+1] = data[i+2] = gray;
+            }
+            // 自动色阶拉伸
+            autoLevels(data);
+        }
+
+        // 自动白平衡：取画面最亮的前 1% 像素，假设它们应为白色
+        function computeAutoWB(data) {
+            const luminances = [];
             for (let i = 0; i < data.length; i += 4) {
                 const r = data[i], g = data[i+1], b = data[i+2];
-                totalLuminance += 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                pixelCount++;
+                const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                luminances.push({r, g, b, lum});
             }
-            const avg = totalLuminance / pixelCount;
-            currentEV = calcEVFromLuminance(avg);
+            luminances.sort((a, b) => b.lum - a.lum);
+            const count = Math.max(1, Math.floor(luminances.length * 0.01));
+            let sumR = 0, sumG = 0, sumB = 0;
+            for (let i = 0; i < count; i++) {
+                sumR += luminances[i].r;
+                sumG += luminances[i].g;
+                sumB += luminances[i].b;
+            }
+            const avgR = sumR / count;
+            const avgG = sumG / count;
+            const avgB = sumB / count;
+            const maxAvg = Math.max(avgR, avgG, avgB);
+            if (maxAvg === 0) return { rGain: 1, gGain: 1, bGain: 1 };
+            return {
+                rGain: maxAvg / avgR,
+                gGain: maxAvg / avgG,
+                bGain: maxAvg / avgB
+            };
         }
 
-        // 根据当前模式与EV计算应显示的曝光组合
-        function computeExposure() {
-            const ev = locked ? lockedEV : currentEV;
-            if (ev === null || ev === undefined) return null;
-
-            const isoFactor = Math.log2(currentISO / 100);
-            const targetN2OverT = Math.pow(2, ev + isoFactor);
-
-            if (mode === 'AUTO') {
-                // 自动模式：找最均衡的光圈/快门组合
-                let bestF = apertureStops[0], bestT = shutterStops[0], minDiff = Infinity;
-                for (let f of apertureStops) {
-                    const t = (f * f) / targetN2OverT;
-                    const closestT = shutterStops.reduce((prev, curr) => {
-                        return Math.abs(curr - t) < Math.abs(prev - t) ? curr : prev;
-                    });
-                    const diff = Math.abs(closestT - t) / t;
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        bestF = f;
-                        bestT = closestT;
-                    }
-                }
-                return { aperture: bestF, shutter: bestT };
-            } else if (mode === 'A') {
-                // 光圈优先：用当前选定光圈算快门
-                const t = (selectedAperture * selectedAperture) / targetN2OverT;
-                const closestT = shutterStops.reduce((prev, curr) => {
-                    return Math.abs(curr - t) < Math.abs(prev - t) ? curr : prev;
-                });
-                return { aperture: selectedAperture, shutter: closestT };
-            } else if (mode === 'S') {
-                // 快门优先：用当前选定快门算光圈
-                const f = Math.sqrt(targetN2OverT * selectedShutter);
-                const closestF = apertureStops.reduce((prev, curr) => {
-                    return Math.abs(curr - f) < Math.abs(prev - f) ? curr : prev;
-                });
-                return { aperture: closestF, shutter: selectedShutter };
+        // 自动色阶：将最暗的 0.5% 映射为 0，最亮的 0.5% 映射为 255
+        function autoLevels(data) {
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.2126 * data[i] + 0.7152 * data[i+1] + 0.0722 * data[i+2];
+                histogram[Math.round(gray)]++;
             }
-        }
-
-        function updateDisplay() {
-            const ev = locked ? lockedEV : currentEV;
-            evValueEl.textContent = ev !== null ? ev.toFixed(1) + ' EV' : '--';
-
-            const exposure = computeExposure();
-            if (exposure) {
-                shutterDisplay.textContent = formatShutter(exposure.shutter);
-                apertureDisplay.textContent = formatAperture(exposure.aperture);
-                shutterMain.textContent = formatShutter(exposure.shutter);
-                apertureMain.textContent = formatAperture(exposure.aperture);
-                // 更新选中状态（AUTO模式下同步用户调节的起点）
-                if (mode === 'AUTO') {
-                    selectedAperture = exposure.aperture;
-                    selectedShutter = exposure.shutter;
-                }
-                // 高亮当前可调节的参数
-                if (mode === 'A') {
-                    apertureMain.style.color = '#fff';
-                    shutterMain.style.color = '#d4af37';
-                } else if (mode === 'S') {
-                    apertureMain.style.color = '#d4af37';
-                    shutterMain.style.color = '#fff';
-                } else {
-                    apertureMain.style.color = '#d4af37';
-                    shutterMain.style.color = '#d4af37';
+            let lowCut = 0, highCut = 255;
+            let cumulative = 0;
+            const total = data.length / 4;
+            const lowThreshold = total * 0.005;
+            const highThreshold = total * 0.995;
+            
+            for (let i = 0; i < 256; i++) {
+                cumulative += histogram[i];
+                if (cumulative >= lowThreshold) {
+                    lowCut = i;
+                    break;
                 }
             }
-            isoDisplay.textContent = currentISO;
-        }
-
-        // ==================== 模式切换 ====================
-        function setMode(newMode) {
-            mode = newMode;
-            // 按钮状态
-            modeAutoBtn.classList.toggle('active', mode === 'AUTO');
-            modeABtn.classList.toggle('active', mode === 'A');
-            modeSBtn.classList.toggle('active', mode === 'S');
-            // 当进入 A 或 S 模式时，用当前曝光值初始化选中参数
-            const exposure = computeExposure();
-            if (exposure) {
-                selectedAperture = exposure.aperture;
-                selectedShutter = exposure.shutter;
-            }
-            updateDisplay();
-        }
-
-        modeAutoBtn.addEventListener('click', () => setMode('AUTO'));
-        modeABtn.addEventListener('click', () => setMode('A'));
-        modeSBtn.addEventListener('click', () => setMode('S'));
-
-        // ==================== 参数调节 ====================
-        // 光圈调节（仅在 A 模式有效）
-        function changeAperture(delta) {
-            if (mode === 'S') return; // S模式下不允许手动调光圈
-            const idx = closestIndex(apertureStops, selectedAperture);
-            const newIdx = Math.min(apertureStops.length-1, Math.max(0, idx + delta));
-            selectedAperture = apertureStops[newIdx];
-            if (mode === 'AUTO') {
-                // 在自动模式下调节光圈，自动切换到光圈优先
-                setMode('A');
-            }
-            updateDisplay();
-        }
-
-        // 快门调节（仅在 S 模式有效）
-        function changeShutter(delta) {
-            if (mode === 'A') return; // A模式下不允许手动调快门
-            const idx = closestIndex(shutterStops, selectedShutter);
-            const newIdx = Math.min(shutterStops.length-1, Math.max(0, idx + delta));
-            selectedShutter = shutterStops[newIdx];
-            if (mode === 'AUTO') {
-                setMode('S');
-            }
-            updateDisplay();
-        }
-
-        apertureUpBtn.addEventListener('click', () => changeAperture(1));
-        apertureDownBtn.addEventListener('click', () => changeAperture(-1));
-        shutterUpBtn.addEventListener('click', () => changeShutter(1));
-        shutterDownBtn.addEventListener('click', () => changeShutter(-1));
-
-        // ISO 调节
-        isoUpBtn.addEventListener('click', () => {
-            const idx = isoValues.indexOf(currentISO);
-            if (idx < isoValues.length-1) currentISO = isoValues[idx+1];
-            if (locked) locked = false;
-            updateDisplay();
-        });
-        isoDownBtn.addEventListener('click', () => {
-            const idx = isoValues.indexOf(currentISO);
-            if (idx > 0) currentISO = isoValues[idx-1];
-            if (locked) locked = false;
-            updateDisplay();
-        });
-
-        // AE-L 锁定
-        lockBtn.addEventListener('click', () => {
-            if (locked) {
-                locked = false; lockedEV = null;
-                lockBtn.textContent = '🔒 AE-L';
-                lockBtn.classList.remove('active');
-            } else {
-                locked = true; lockedEV = currentEV;
-                lockBtn.textContent = '🔓 AE-L (锁定)';
-                lockBtn.classList.add('active');
-            }
-            updateDisplay();
-        });
-        document.getElementById('viewfinder').addEventListener('click', () => lockBtn.click());
-
-        // ==================== 摄像头启动 ====================
-        async function initCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', aspectRatio: 4/3, width: { ideal: 320 }, height: { ideal: 240 } },
-                    audio: false
-                });
-                video.srcObject = stream;
-                await video.play();
-                warningEl.textContent = '';
-                startMetering();
-            } catch (err) {
-                warningEl.textContent = '摄像头不可用，使用模拟数据';
-                simulateMetering();
-            }
-        }
-
-        function simulateMetering() {
-            setInterval(() => {
-                if (!locked) {
-                    currentEV = Math.round((10 + Math.random() * 6) * 10) / 10;
-                    updateDisplay();
+            cumulative = 0;
+            for (let i = 255; i >= 0; i--) {
+                cumulative += histogram[i];
+                if (cumulative >= (total - highThreshold)) {
+                    highCut = i;
+                    break;
                 }
-            }, 500);
-        }
-
-        function startMetering() {
-            function loop() {
-                if (!locked) measureEV();
-                updateDisplay();
-                animationId = requestAnimationFrame(loop);
             }
-            loop();
+            if (highCut <= lowCut) return;
+            const scale = 255 / (highCut - lowCut);
+            for (let i = 0; i < data.length; i += 4) {
+                data[i]     = Math.min(255, Math.max(0, (data[i] - lowCut) * scale));
+                data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - lowCut) * scale));
+                data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - lowCut) * scale));
+            }
         }
 
-        initCamera();
-        window.addEventListener('beforeunload', () => {
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            if (animationId) cancelAnimationFrame(animationId);
+        // 手动曝光、对比度、色温/色调调整
+        function applyManualAdjustments(data) {
+            const expFactor = adjustments.exposure / 100 * 0.8; // -0.8 ~ +0.8 倍系数
+            const contFactor = adjustments.contrast / 50;        // -1 ~ 1
+            const tempShift = adjustments.temp / 50 * 30;       // -30 ~ 30
+            const tintShift = adjustments.tint / 50 * 30;
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i], g = data[i+1], b = data[i+2];
+                // 曝光
+                r = Math.min(255, Math.max(0, r * (1 + expFactor)));
+                g = Math.min(255, Math.max(0, g * (1 + expFactor)));
+                b = Math.min(255, Math.max(0, b * (1 + expFactor)));
+                
+                // 对比度 (围绕 128 拉伸)
+                if (contFactor !== 0) {
+                    r = ((r / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
+                    g = ((g / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
+                    b = ((b / 255 - 0.5) * (1 + contFactor) + 0.5) * 255;
+                }
+                
+                // 色温：调整蓝-黄平衡（蓝色通道）
+                if (currentMode === 'color') {
+                    r = Math.min(255, Math.max(0, r + tempShift * 0.5));
+                    b = Math.min(255, Math.max(0, b - tempShift * 0.5));
+                    // 色调：调整绿-品红平衡
+                    g = Math.min(255, Math.max(0, g + tintShift * 0.5));
+                    r = Math.min(255, Math.max(0, r - tintShift * 0.25));
+                    b = Math.min(255, Math.max(0, b - tintShift * 0.25));
+                }
+                
+                data[i] = r;
+                data[i+1] = g;
+                data[i+2] = b;
+            }
+        }
+
+        // 一键去色罩（丢弃灰点手动校正，重新自动计算）
+        function autoWhiteBalanceAndProcess() {
+            autoWBGains = null; // 重置灰点增益，用自动
+            processImage();
+        }
+
+        // ========== 灰点拾取 ==========
+        pickGrayBtn.addEventListener('click', () => {
+            if (!originalImage) return;
+            isPickingGray = !isPickingGray;
+            pickGrayBtn.classList.toggle('active', isPickingGray);
+            canvas.style.cursor = isPickingGray ? 'crosshair' : 'default';
         });
+
+        canvas.addEventListener('click', (e) => {
+            if (!isPickingGray || !originalImage) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX);
+            const y = Math.floor((e.clientY - rect.top) * scaleY);
+            
+            // 获取点击位置的像素（当前 canvas 上是已经反相并校正后的图像吗？不应该）
+            // 我们需要从原图反相后、未校色的状态取像素。简便起见，重新绘制原图并取反相像素。
+            // 这里重新渲染一次临时 canvas 获取反相像素
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = originalImage.width;
+            tempCanvas.height = originalImage.height;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.drawImage(originalImage, 0, 0);
+            const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            const idx = (y * tempCanvas.width + x) * 4;
+            let r = 255 - imgData.data[idx];
+            let g = 255 - imgData.data[idx+1];
+            let b = 255 - imgData.data[idx+2];
+            
+            // 计算灰点增益：使得该点变为中性灰 (取 G 为基准或亮度为基准)
+            const gray = (r + g + b) / 3;
+            if (gray === 0) return;
+            autoWBGains = {
+                rGain: gray / r,
+                gGain: gray / g,
+                bGain: gray / b
+            };
+            
+            isPickingGray = false;
+            pickGrayBtn.classList.remove('active');
+            processImage();
+        });
+
+        // ========== 重置 ==========
+        resetBtn.addEventListener('click', () => {
+            adjustments = { exposure:0, contrast:0, temp:0, tint:0 };
+            updateSlidersUI();
+            autoWBGains = null;
+            if (originalImage) processImage();
+        });
+
+        // ========== 下载 ==========
+        downloadBtn.addEventListener('click', () => {
+            if (!originalImage) return;
+            const link = document.createElement('a');
+            link.download = 'corrected.jpg';
+            link.href = canvas.toDataURL('image/jpeg', 0.92);
+            link.click();
+        });
+
+        // ========== 滑块事件 ==========
+        function updateSlidersUI() {
+            exposureSlider.value = adjustments.exposure;
+            contrastSlider.value = adjustments.contrast;
+            tempSlider.value = adjustments.temp;
+            tintSlider.value = adjustments.tint;
+            exposureVal.textContent = adjustments.exposure;
+            contrastVal.textContent = adjustments.contrast;
+            tempVal.textContent = adjustments.temp;
+            tintVal.textContent = adjustments.tint;
+        }
+
+        exposureSlider.addEventListener('input', () => {
+            adjustments.exposure = parseInt(exposureSlider.value);
+            exposureVal.textContent = adjustments.exposure;
+            processImage();
+        });
+        contrastSlider.addEventListener('input', () => {
+            adjustments.contrast = parseInt(contrastSlider.value);
+            contrastVal.textContent = adjustments.contrast;
+            processImage();
+        });
+        tempSlider.addEventListener('input', () => {
+            adjustments.temp = parseInt(tempSlider.value);
+            tempVal.textContent = adjustments.temp;
+            processImage();
+        });
+        tintSlider.addEventListener('input', () => {
+            adjustments.tint = parseInt(tintSlider.value);
+            tintVal.textContent = adjustments.tint;
+            processImage();
+        });
+
+        // ========== 窗口大小变化时重绘 ==========
+        window.addEventListener('resize', () => {
+            if (originalImage) processImage();
+        });
+
+        // 初始化占位符
+        placeholder.style.display = 'block';
+        canvas.style.display = 'none';
+        // 当有图片时显示 canvas
+        const observer = new MutationObserver(() => {
+            if (originalImage) {
+                canvas.style.display = 'block';
+                placeholder.style.display = 'none';
+            }
+        });
+        observer.observe(imageArea, { childList: true, subtree: true });
     </script>
 </body>
 </html>
