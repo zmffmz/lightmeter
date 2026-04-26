@@ -60,13 +60,13 @@
             color: #d4af37; font-size: 18px;
         }
         .btn-row {
-            display: flex; gap: 10px; justify-content: center;
+            display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
         }
         button {
             background: #2a2a2a; border: 1px solid #444;
-            color: #ddd; padding: 10px 20px; border-radius: 25px;
-            font-size: 16px; font-weight: bold; cursor: pointer;
-            transition: all 0.2s;
+            color: #ddd; padding: 10px 16px; border-radius: 25px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
+            transition: all 0.2s; white-space: nowrap;
         }
         button:active { background: #3a3a3a; }
         button.primary { background: #d4af37; color: #000; border-color: #d4af37; }
@@ -86,18 +86,22 @@
         <canvas id="outputCanvas"></canvas>
     </div>
     <div class="controls">
+        <!-- 滤镜模式按钮 -->
         <div class="filter-row">
             <button class="filter-btn active" data-filter="none">🎨 原色</button>
             <button class="filter-btn" data-filter="red">🔴 红黑</button>
             <button class="filter-btn" data-filter="blue">🔵 蓝黑</button>
             <button class="filter-btn" data-filter="bw">⚫ 黑白</button>
         </div>
+        <!-- 像素尺寸 -->
         <div class="slider-group">
             <label>像素尺寸</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
+        <!-- 按钮行 -->
         <div class="btn-row">
+            <button id="switchCameraBtn">🔄 切换镜头</button>
             <button id="freezeBtn">🧊 冻结</button>
             <button id="captureBtn" class="primary">📸 拍照</button>
         </div>
@@ -106,6 +110,7 @@
     </div>
 
     <script>
+        // ========== DOM 元素 ==========
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -113,19 +118,22 @@
         const pixelValue = document.getElementById('pixelValue');
         const freezeBtn = document.getElementById('freezeBtn');
         const captureBtn = document.getElementById('captureBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
         const warningEl = document.getElementById('warning');
         const filterBtns = document.querySelectorAll('.filter-btn');
 
+        // ========== 状态变量 ==========
         let stream = null;
         let animationId = null;
         let frozen = false;
         let frozenFrame = null;
         let currentPixelSize = 8;
         let currentFilter = 'none';
+        let currentFacingMode = 'environment';  // 'environment' (后置) | 'user' (前置)
         let videoReady = false;
         let initAttempted = false;
 
-        // 滤镜切换
+        // ========== 滤镜切换 ==========
         filterBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 filterBtns.forEach(b => b.classList.remove('active'));
@@ -134,15 +142,38 @@
             });
         });
 
-        // 摄像头启动
+        // ========== 清理摄像头资源 ==========
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            videoReady = false;
+        }
+
+        // ========== 启动摄像头（使用当前 facingMode） ==========
         async function initCamera() {
+            stopCamera();
+            initAttempted = false;
+            frozen = false;
+            frozenFrame = null;
+            freezeBtn.textContent = '🧊 冻结';
+            
             if (initAttempted) return;
             initAttempted = true;
             warningEl.textContent = '正在请求摄像头...';
             
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: 640, height: 640 },
+                    video: { 
+                        facingMode: currentFacingMode, 
+                        width: 640, 
+                        height: 640 
+                    },
                     audio: false
                 });
                 video.srcObject = stream;
@@ -152,13 +183,19 @@
                     videoReady = true;
                     setupCanvasAndStart();
                     warningEl.textContent = '';
+                    // 更新切换按钮文字
+                    switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
+                        '🔄 切换前置' : '🔄 切换后置';
                 });
                 
+                // 超时重试
                 setTimeout(() => {
                     if (!videoReady && video.videoWidth > 0) {
                         videoReady = true;
                         setupCanvasAndStart();
                         warningEl.textContent = '';
+                        switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
+                            '🔄 切换前置' : '🔄 切换后置';
                     } else if (!videoReady) {
                         warningEl.textContent = '摄像头已打开但未获取画面，尝试刷新页面';
                     }
@@ -170,6 +207,12 @@
             }
         }
 
+        // ========== 切换摄像头 ==========
+        switchCameraBtn.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+            initCamera();
+        });
+
         function setupCanvasAndStart() {
             const size = Math.min(video.videoWidth, video.videoHeight) || 640;
             canvas.width = size;
@@ -177,15 +220,14 @@
             startPixelLoop();
         }
 
-        // ★ 新：稳定 RGB 处理，不引入 HSL
+        // ========== 滤镜处理 ==========
         function applyFilterToBlock(r, g, b) {
-            const satBoost = 2.0;    // 目标通道强度增强
-            const lumReduce = 0.3;   // 整体亮度系数
-            const threshold = 30;    // 暗部压黑阈值
+            const satBoost = 1.8;
+            const lumReduce = 0.7;
+            const threshold = 25;
 
             switch (currentFilter) {
                 case 'red': {
-                    // 保留红色为主，混入极少绿、蓝以保留一点点轮廓（否则暗部全黑就无细节）
                     let rr = r * satBoost;
                     let gg = g * 0.15;
                     let bb = b * 0.15;
@@ -222,7 +264,7 @@
             }
         }
 
-        // 像素化核心
+        // ========== 像素化核心 ==========
         function pixelateFrame() {
             if (!stream || !videoReady || video.readyState < 2) return;
             
@@ -291,6 +333,7 @@
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
         }
 
+        // ========== 动画循环 ==========
         function startPixelLoop() {
             function loop() {
                 if (!frozen) {
@@ -303,6 +346,7 @@
             loop();
         }
 
+        // ========== 冻结/解冻 ==========
         function toggleFreeze() {
             if (frozen) {
                 frozen = false;
@@ -320,6 +364,7 @@
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
+        // ========== 拍照保存 ==========
         captureBtn.addEventListener('click', () => {
             if (canvas.width === 0) return;
             const dataUrl = canvas.toDataURL('image/png');
@@ -329,18 +374,18 @@
             link.click();
         });
 
+        // ========== 像素尺寸滑块 ==========
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
         });
 
+        // ========== 清理 ==========
         window.addEventListener('beforeunload', () => {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-            if (animationId) cancelAnimationFrame(animationId);
+            stopCamera();
         });
 
+        // 启动
         initCamera();
     </script>
 </body>
