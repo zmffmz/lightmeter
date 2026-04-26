@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>像素化滤镜相机 · 红黑/蓝黑/黑白</title>
+    <title>像素化滤镜相机 · 红黑/蓝黑剪影</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
@@ -30,7 +30,7 @@
         .controls {
             width: 100%; max-width: 500px;
             padding: 0 20px;
-            display: flex; flex-direction: column; gap: 10px;
+            display: flex; flex-direction: column; gap: 8px;
         }
         .filter-row {
             display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
@@ -45,27 +45,27 @@
             background: #d4af37; color: #000; border-color: #d4af37;
         }
         .slider-group {
-            display: flex; align-items: center; gap: 12px;
-            background: #1a1a1a; padding: 10px 16px;
+            display: flex; align-items: center; gap: 10px;
+            background: #1a1a1a; padding: 8px 14px;
             border-radius: 30px; border: 1px solid #333;
         }
         .slider-group label {
-            font-size: 16px; color: #aaa; width: 60px;
+            font-size: 14px; color: #aaa; width: 55px;
         }
         input[type=range] {
             flex: 1; accent-color: #d4af37;
         }
         .slider-value {
-            width: 40px; text-align: center; font-weight: bold;
-            color: #d4af37; font-size: 18px;
+            width: 36px; text-align: center; font-weight: bold;
+            color: #d4af37; font-size: 16px;
         }
         .btn-row {
-            display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+            display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
         }
         button {
             background: #2a2a2a; border: 1px solid #444;
-            color: #ddd; padding: 10px 16px; border-radius: 25px;
-            font-size: 15px; font-weight: bold; cursor: pointer;
+            color: #ddd; padding: 10px 14px; border-radius: 25px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
             transition: all 0.2s; white-space: nowrap;
         }
         button:active { background: #3a3a3a; }
@@ -88,24 +88,36 @@
     <div class="controls">
         <!-- 滤镜模式按钮 -->
         <div class="filter-row">
-            <button class="filter-btn active" data-filter="none">原色</button>
-            <button class="filter-btn" data-filter="red">红黑</button>
-            <button class="filter-btn" data-filter="blue">蓝黑</button>
-            <button class="filter-btn" data-filter="bw">黑白</button>
+            <button class="filter-btn active" data-filter="none">🎨 原色</button>
+            <button class="filter-btn" data-filter="red">🔴 红黑</button>
+            <button class="filter-btn" data-filter="blue">🔵 蓝黑</button>
+            <button class="filter-btn" data-filter="bw">⚫ 黑白</button>
         </div>
         <!-- 像素尺寸 -->
         <div class="slider-group">
-            <label>像素尺寸</label>
+            <label>像素</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
+        <!-- 剪影阈值（红黑/蓝黑模式） -->
+        <div class="slider-group" id="thresholdRow">
+            <label>阈值</label>
+            <input type="range" id="thresholdSlider" min="20" max="200" value="80" step="1">
+            <span class="slider-value" id="thresholdValue">80</span>
+        </div>
+        <!-- 颜色深度（红黑/蓝黑模式） -->
+        <div class="slider-group" id="colorDepthRow">
+            <label>深度</label>
+            <input type="range" id="colorDepthSlider" min="50" max="255" value="220" step="1">
+            <span class="slider-value" id="colorDepthValue">220</span>
+        </div>
         <!-- 按钮行 -->
         <div class="btn-row">
-            <button id="switchCameraBtn">切换镜头</button>
-            <button id="freezeBtn">冻结</button>
-            <button id="captureBtn" class="primary">拍照</button>
+            <button id="switchCameraBtn">🔄 切换镜头</button>
+            <button id="freezeBtn">🧊 冻结</button>
+            <button id="captureBtn" class="primary">📸 拍照</button>
         </div>
-        <div class="info">点击画面切换冻结 · 触摸对焦</div>
+        <div class="info">点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
 
@@ -116,6 +128,12 @@
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const pixelSlider = document.getElementById('pixelSize');
         const pixelValue = document.getElementById('pixelValue');
+        const thresholdSlider = document.getElementById('thresholdSlider');
+        const thresholdValue = document.getElementById('thresholdValue');
+        const colorDepthSlider = document.getElementById('colorDepthSlider');
+        const colorDepthValue = document.getElementById('colorDepthValue');
+        const thresholdRow = document.getElementById('thresholdRow');
+        const colorDepthRow = document.getElementById('colorDepthRow');
         const freezeBtn = document.getElementById('freezeBtn');
         const captureBtn = document.getElementById('captureBtn');
         const switchCameraBtn = document.getElementById('switchCameraBtn');
@@ -129,9 +147,22 @@
         let frozenFrame = null;
         let currentPixelSize = 8;
         let currentFilter = 'none';
-        let currentFacingMode = 'environment';  // 'environment' (后置) | 'user' (前置)
+        let currentFacingMode = 'environment';
         let videoReady = false;
         let initAttempted = false;
+        // 用户可调参数
+        let thresholdValue_user = 80;   // 剪影阈值
+        let colorDepth = 220;           // 颜色深度
+
+        // ========== 滑块值绑定 ==========
+        thresholdSlider.addEventListener('input', () => {
+            thresholdValue_user = parseInt(thresholdSlider.value);
+            thresholdValue.textContent = thresholdValue_user;
+        });
+        colorDepthSlider.addEventListener('input', () => {
+            colorDepth = parseInt(colorDepthSlider.value);
+            colorDepthValue.textContent = colorDepth;
+        });
 
         // ========== 滤镜切换 ==========
         filterBtns.forEach(btn => {
@@ -139,10 +170,22 @@
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFilter = btn.dataset.filter;
+                // 红黑/蓝黑模式显示阈值和深度滑块，其他模式隐藏
+                if (currentFilter === 'red' || currentFilter === 'blue') {
+                    thresholdRow.style.display = 'flex';
+                    colorDepthRow.style.display = 'flex';
+                } else {
+                    thresholdRow.style.display = 'none';
+                    colorDepthRow.style.display = 'none';
+                }
             });
         });
 
-        // ========== 清理摄像头资源 ==========
+        // 初始状态：非红/蓝模式隐藏额外滑块
+        thresholdRow.style.display = 'none';
+        colorDepthRow.style.display = 'none';
+
+        // ========== 摄像头清理 ==========
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -155,13 +198,13 @@
             videoReady = false;
         }
 
-        // ========== 启动摄像头（使用当前 facingMode） ==========
+        // ========== 启动摄像头 ==========
         async function initCamera() {
             stopCamera();
             initAttempted = false;
             frozen = false;
             frozenFrame = null;
-            freezeBtn.textContent = '冻结';
+            freezeBtn.textContent = '🧊 冻结';
             
             if (initAttempted) return;
             initAttempted = true;
@@ -183,19 +226,17 @@
                     videoReady = true;
                     setupCanvasAndStart();
                     warningEl.textContent = '';
-                    // 更新切换按钮文字
                     switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
-                        '切换前置' : '切换后置';
+                        '🔄 切换前置' : '🔄 切换后置';
                 });
                 
-                // 超时重试
                 setTimeout(() => {
                     if (!videoReady && video.videoWidth > 0) {
                         videoReady = true;
                         setupCanvasAndStart();
                         warningEl.textContent = '';
                         switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
-                            '切换前置' : '切换后置';
+                            '🔄 切换前置' : '🔄 切换后置';
                     } else if (!videoReady) {
                         warningEl.textContent = '摄像头已打开但未获取画面，尝试刷新页面';
                     }
@@ -220,38 +261,22 @@
             startPixelLoop();
         }
 
-        // ========== 滤镜处理 ==========
+        // ★★★ 剪影滤镜（阈值和深度实时可调） ★★★
         function applyFilterToBlock(r, g, b) {
-            const satBoost = 1.8;
-            const lumReduce = 0.7;
-            const threshold = 25;
-
             switch (currentFilter) {
                 case 'red': {
-                    let rr = r * satBoost;
-                    let gg = g * 0.15;
-                    let bb = b * 0.15;
-                    rr *= lumReduce;
-                    gg *= lumReduce;
-                    bb *= lumReduce;
-                    rr = Math.min(255, rr);
-                    gg = Math.min(255, gg);
-                    bb = Math.min(255, bb);
-                    if (r < threshold) return [0, 0, 0];
-                    return [rr, gg, bb];
+                    if (r >= thresholdValue_user) {
+                        return [colorDepth, 15, 15];
+                    } else {
+                        return [0, 0, 0];
+                    }
                 }
                 case 'blue': {
-                    let rr = r * 0.15;
-                    let gg = g * 0.15;
-                    let bb = b * satBoost;
-                    rr *= lumReduce;
-                    gg *= lumReduce;
-                    bb *= lumReduce;
-                    rr = Math.min(255, rr);
-                    gg = Math.min(255, gg);
-                    bb = Math.min(255, bb);
-                    if (b < threshold) return [0, 0, 0];
-                    return [rr, gg, bb];
+                    if (b >= thresholdValue_user) {
+                        return [15, 15, colorDepth];
+                    } else {
+                        return [0, 0, 0];
+                    }
                 }
                 case 'bw': {
                     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -351,13 +376,13 @@
             if (frozen) {
                 frozen = false;
                 frozenFrame = null;
-                freezeBtn.textContent = '冻结';
+                freezeBtn.textContent = '🧊 冻结';
             } else {
                 frozen = true;
                 if (canvas.width > 0 && canvas.height > 0) {
                     frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 }
-                freezeBtn.textContent = '解冻';
+                freezeBtn.textContent = '🔥 解冻';
             }
         }
 
