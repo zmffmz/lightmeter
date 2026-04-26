@@ -21,11 +21,16 @@
             background: #111; overflow: hidden;
             border: 2px solid #333;
             margin-bottom: 8px;
+            display: flex; align-items: center; justify-content: center;
         }
         video { display: none; }
         canvas {
             display: block; width: 100%; height: 100%;
             image-rendering: pixelated;
+        }
+        .placeholder {
+            color: #555; font-size: 16px; text-align: center;
+            pointer-events: none;
         }
         .controls {
             width: 100%; max-width: 500px;
@@ -84,6 +89,7 @@
     <div id="viewfinder">
         <video id="video" autoplay playsinline muted></video>
         <canvas id="outputCanvas"></canvas>
+        <div class="placeholder" id="placeholder">上传照片 或 使用摄像头</div>
     </div>
     <div class="controls">
         <!-- 滤镜模式按钮 -->
@@ -99,13 +105,13 @@
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
-        <!-- 剪影阈值（红黑/蓝黑模式） -->
+        <!-- 剪影阈值 -->
         <div class="slider-group" id="thresholdRow">
             <label>阈值</label>
             <input type="range" id="thresholdSlider" min="20" max="200" value="80" step="1">
             <span class="slider-value" id="thresholdValue">80</span>
         </div>
-        <!-- 颜色深度（红黑/蓝黑模式） -->
+        <!-- 颜色深度 -->
         <div class="slider-group" id="colorDepthRow">
             <label>亮度</label>
             <input type="range" id="colorDepthSlider" min="50" max="255" value="220" step="1">
@@ -113,19 +119,24 @@
         </div>
         <!-- 按钮行 -->
         <div class="btn-row">
-            <button id="switchCameraBtn">切换镜头</button>
+            <button id="uploadBtn">上传</button>
+            <button id="cameraBtn">拍照</button>
+            <button id="switchCameraBtn">切换</button>
             <button id="freezeBtn">冻结</button>
-            <button id="captureBtn" class="primary">拍照</button>
+            <button id="downloadBtn" class="primary">保存</button>
         </div>
         <div class="info">点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
+    <!-- 隐藏的文件选择器 -->
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
 
     <script>
         // ========== DOM 元素 ==========
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const placeholder = document.getElementById('placeholder');
         const pixelSlider = document.getElementById('pixelSize');
         const pixelValue = document.getElementById('pixelValue');
         const thresholdSlider = document.getElementById('thresholdSlider');
@@ -135,8 +146,11 @@
         const thresholdRow = document.getElementById('thresholdRow');
         const colorDepthRow = document.getElementById('colorDepthRow');
         const freezeBtn = document.getElementById('freezeBtn');
-        const captureBtn = document.getElementById('captureBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
         const switchCameraBtn = document.getElementById('switchCameraBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const fileInput = document.getElementById('fileInput');
         const warningEl = document.getElementById('warning');
         const filterBtns = document.querySelectorAll('.filter-btn');
 
@@ -150,11 +164,12 @@
         let currentFacingMode = 'environment';
         let videoReady = false;
         let initAttempted = false;
-        // 用户可调参数
-        let thresholdValue_user = 80;   // 剪影阈值
-        let colorDepth = 220;           // 颜色深度
+        let thresholdValue_user = 80;
+        let colorDepth = 220;
+        let uploadedImage = null;      // 存储上传的照片
+        let mode = 'camera';           // 'camera' 或 'upload'
 
-        // ========== 滑块值绑定 ==========
+        // ========== 滑块事件 ==========
         thresholdSlider.addEventListener('input', () => {
             thresholdValue_user = parseInt(thresholdSlider.value);
             thresholdValue.textContent = thresholdValue_user;
@@ -170,7 +185,6 @@
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFilter = btn.dataset.filter;
-                // 红黑/蓝黑模式显示阈值和深度滑块，其他模式隐藏
                 if (currentFilter === 'red' || currentFilter === 'blue') {
                     thresholdRow.style.display = 'flex';
                     colorDepthRow.style.display = 'flex';
@@ -178,10 +192,12 @@
                     thresholdRow.style.display = 'none';
                     colorDepthRow.style.display = 'none';
                 }
+                // 如果有上传的图片，重新处理
+                if (mode === 'upload' && uploadedImage) {
+                    processImage();
+                }
             });
         });
-
-        // 初始状态：非红/蓝模式隐藏额外滑块
         thresholdRow.style.display = 'none';
         colorDepthRow.style.display = 'none';
 
@@ -198,6 +214,33 @@
             videoReady = false;
         }
 
+        // ========== 切换到摄像头模式 ==========
+        async function switchToCamera() {
+            stopCamera();
+            mode = 'camera';
+            uploadedImage = null;
+            frozen = false;
+            frozenFrame = null;
+            freezeBtn.textContent = '冻结';
+            canvas.style.display = 'none';
+            placeholder.style.display = 'block';
+            await initCamera();
+        }
+
+        // ========== 切换到上传模式 ==========
+        function switchToUpload(img) {
+            stopCamera();
+            mode = 'upload';
+            uploadedImage = img;
+            frozen = false;
+            frozenFrame = null;
+            freezeBtn.textContent = '冻结';
+            videoReady = false;
+            placeholder.style.display = 'none';
+            canvas.style.display = 'block';
+            processImage();
+        }
+
         // ========== 启动摄像头 ==========
         async function initCamera() {
             stopCamera();
@@ -212,11 +255,7 @@
             
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: currentFacingMode, 
-                        width: 640, 
-                        height: 640 
-                    },
+                    video: { facingMode: currentFacingMode, width: 640, height: 640 },
                     audio: false
                 });
                 video.srcObject = stream;
@@ -226,8 +265,9 @@
                     videoReady = true;
                     setupCanvasAndStart();
                     warningEl.textContent = '';
-                    switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
-                        '切换前置' : '切换后置';
+                    switchCameraBtn.textContent = '切换';
+                    placeholder.style.display = 'none';
+                    canvas.style.display = 'block';
                 });
                 
                 setTimeout(() => {
@@ -235,24 +275,43 @@
                         videoReady = true;
                         setupCanvasAndStart();
                         warningEl.textContent = '';
-                        switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
-                            '切换前置' : '切换后置';
+                        placeholder.style.display = 'none';
+                        canvas.style.display = 'block';
                     } else if (!videoReady) {
-                        warningEl.textContent = '摄像头已打开但未获取画面，尝试刷新页面';
+                        warningEl.textContent = '摄像头未能获取画面';
                     }
                 }, 2000);
                 
             } catch (err) {
-                warningEl.textContent = '摄像头权限被拒绝，请在浏览器设置中允许相机权限后刷新页面';
+                warningEl.textContent = '摄像头权限被拒绝';
+                placeholder.textContent = '请使用上传照片功能';
                 console.error('Camera error:', err);
             }
         }
 
         // ========== 切换摄像头 ==========
         switchCameraBtn.addEventListener('click', () => {
+            if (mode === 'upload') return;
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             initCamera();
         });
+
+        // ========== 上传照片按钮 ==========
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => switchToUpload(img);
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ========== 相机按钮 ==========
+        cameraBtn.addEventListener('click', switchToCamera);
 
         function setupCanvasAndStart() {
             const size = Math.min(video.videoWidth, video.videoHeight) || 640;
@@ -261,55 +320,56 @@
             startPixelLoop();
         }
 
-        // ★★★ 剪影滤镜（阈值和深度实时可调） ★★★
+        // ========== 处理上传的图片 ==========
+        function processImage() {
+            if (!uploadedImage) return;
+            
+            // 保持正方形裁剪
+            const imgW = uploadedImage.width;
+            const imgH = uploadedImage.height;
+            const size = Math.min(imgW, imgH);
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // 画到临时canvas
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            
+            const sx = (imgW - size) / 2;
+            const sy = (imgH - size) / 2;
+            tempCtx.drawImage(uploadedImage, sx, sy, size, size, 0, 0, size, size);
+            
+            const imageData = tempCtx.getImageData(0, 0, size, size);
+            pixelateData(imageData, size);
+        }
+
+        // ========== 滤镜函数 ==========
         function applyFilterToBlock(r, g, b) {
             switch (currentFilter) {
                 case 'red': {
-                    if (r >= thresholdValue_user) {
-                        return [colorDepth, 15, 15];
-                    } else {
-                        return [0, 0, 0];
-                    }
+                    if (r >= thresholdValue_user) return [colorDepth, 15, 15];
+                    return [0, 0, 0];
                 }
                 case 'blue': {
-                    if (b >= thresholdValue_user) {
-                        return [15, 15, colorDepth];
-                    } else {
-                        return [0, 0, 0];
-                    }
+                    if (b >= thresholdValue_user) return [15, 15, colorDepth];
+                    return [0, 0, 0];
                 }
                 case 'bw': {
                     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
                     const contrast = gray < 128 ? 0 : 255;
                     return [contrast, contrast, contrast];
                 }
-                case 'none':
                 default:
                     return [r, g, b];
             }
         }
 
-        // ========== 像素化核心 ==========
-        function pixelateFrame() {
-            if (!stream || !videoReady || video.readyState < 2) return;
-            
-            const vw = video.videoWidth || 640;
-            const vh = video.videoHeight || 640;
-            const size = Math.min(vw, vh);
-            if (size === 0) return;
-            
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = size;
-            tempCanvas.height = size;
-            
-            const sx = (vw - size) / 2;
-            const sy = (vh - size) / 2;
-            tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-            
-            const imageData = tempCtx.getImageData(0, 0, size, size);
+        // ========== 通用像素化处理（摄像头和上传共用） ==========
+        function pixelateData(imageData, size) {
             const data = imageData.data;
-            
             const blockSize = currentPixelSize;
             const smallW = Math.floor(size / blockSize);
             const smallH = Math.floor(size / blockSize);
@@ -358,9 +418,35 @@
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
         }
 
-        // ========== 动画循环 ==========
+        // ========== 摄像头像素化 ==========
+        function pixelateFrame() {
+            if (!stream || !videoReady || video.readyState < 2) return;
+            
+            const vw = video.videoWidth || 640;
+            const vh = video.videoHeight || 640;
+            const size = Math.min(vw, vh);
+            if (size === 0) return;
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            
+            const sx = (vw - size) / 2;
+            const sy = (vh - size) / 2;
+            tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+            
+            const imageData = tempCtx.getImageData(0, 0, size, size);
+            pixelateData(imageData, size);
+        }
+
+        // ========== 动画循环（仅摄像头模式） ==========
         function startPixelLoop() {
             function loop() {
+                if (mode !== 'camera') {
+                    cancelAnimationFrame(animationId);
+                    return;
+                }
                 if (!frozen) {
                     pixelateFrame();
                 } else if (frozenFrame) {
@@ -389,8 +475,8 @@
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
-        // ========== 拍照保存 ==========
-        captureBtn.addEventListener('click', () => {
+        // ========== 保存下载 ==========
+        downloadBtn.addEventListener('click', () => {
             if (canvas.width === 0) return;
             const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
@@ -403,6 +489,9 @@
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
+            if (mode === 'upload' && uploadedImage) {
+                processImage();
+            }
         });
 
         // ========== 清理 ==========
@@ -410,7 +499,7 @@
             stopCamera();
         });
 
-        // 启动
+        // 初始启动摄像头
         initCamera();
     </script>
 </body>
