@@ -88,10 +88,10 @@
     <div class="controls">
         <!-- 滤镜模式按钮 -->
         <div class="filter-row">
-            <button class="filter-btn active" data-filter="none">🎨 原色</button>
-            <button class="filter-btn" data-filter="red">🔴 红黑</button>
-            <button class="filter-btn" data-filter="blue">🔵 蓝黑</button>
-            <button class="filter-btn" data-filter="bw">⚫ 黑白</button>
+            <button class="filter-btn active" data-filter="none">原色</button>
+            <button class="filter-btn" data-filter="red">红黑</button>
+            <button class="filter-btn" data-filter="blue">蓝黑</button>
+            <button class="filter-btn" data-filter="bw">黑白</button>
         </div>
         <!-- 像素尺寸 -->
         <div class="slider-group">
@@ -101,9 +101,9 @@
         </div>
         <!-- 按钮行 -->
         <div class="btn-row">
-            <button id="switchCameraBtn">🔄 切换镜头</button>
-            <button id="freezeBtn">🧊 冻结</button>
-            <button id="captureBtn" class="primary">📸 拍照</button>
+            <button id="switchCameraBtn">切换镜头</button>
+            <button id="freezeBtn">冻结</button>
+            <button id="captureBtn" class="primary">拍照</button>
         </div>
         <div class="info">点击画面切换冻结 · 触摸对焦</div>
         <div class="warning" id="warning"></div>
@@ -161,7 +161,7 @@
             initAttempted = false;
             frozen = false;
             frozenFrame = null;
-            freezeBtn.textContent = '🧊 冻结';
+            freezeBtn.textContent = '冻结';
             
             if (initAttempted) return;
             initAttempted = true;
@@ -185,7 +185,7 @@
                     warningEl.textContent = '';
                     // 更新切换按钮文字
                     switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
-                        '🔄 切换前置' : '🔄 切换后置';
+                        '切换前置' : '切换后置';
                 });
                 
                 // 超时重试
@@ -195,7 +195,7 @@
                         setupCanvasAndStart();
                         warningEl.textContent = '';
                         switchCameraBtn.textContent = currentFacingMode === 'environment' ? 
-                            '🔄 切换前置' : '🔄 切换后置';
+                            '切换前置' : '切换后置';
                     } else if (!videoReady) {
                         warningEl.textContent = '摄像头已打开但未获取画面，尝试刷新页面';
                     }
@@ -351,13 +351,13 @@
             if (frozen) {
                 frozen = false;
                 frozenFrame = null;
-                freezeBtn.textContent = '🧊 冻结';
+                freezeBtn.textContent = '冻结';
             } else {
                 frozen = true;
                 if (canvas.width > 0 && canvas.height > 0) {
                     frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 }
-                freezeBtn.textContent = '🔥 解冻';
+                freezeBtn.textContent = '解冻';
             }
         }
 
