@@ -86,20 +86,17 @@
         <canvas id="outputCanvas"></canvas>
     </div>
     <div class="controls">
-        <!-- 滤镜模式按钮 -->
         <div class="filter-row">
             <button class="filter-btn active" data-filter="none">🎨 原色</button>
             <button class="filter-btn" data-filter="red">🔴 红黑</button>
             <button class="filter-btn" data-filter="blue">🔵 蓝黑</button>
             <button class="filter-btn" data-filter="bw">⚫ 黑白</button>
         </div>
-        <!-- 像素尺寸 -->
         <div class="slider-group">
             <label>像素尺寸</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
-        <!-- 冻结/拍照 -->
         <div class="btn-row">
             <button id="freezeBtn">🧊 冻结</button>
             <button id="captureBtn" class="primary">📸 拍照</button>
@@ -109,7 +106,6 @@
     </div>
 
     <script>
-        // ========== DOM 元素 ==========
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -120,27 +116,25 @@
         const warningEl = document.getElementById('warning');
         const filterBtns = document.querySelectorAll('.filter-btn');
 
-        // ========== 状态变量 ==========
         let stream = null;
         let animationId = null;
         let frozen = false;
         let frozenFrame = null;
         let currentPixelSize = 8;
-        let currentFilter = 'none';  // 'none' | 'red' | 'blue' | 'bw'
+        let currentFilter = 'none';
         let videoReady = false;
         let initAttempted = false;
 
-        // ========== 滤镜切换按钮事件 ==========
+        // 滤镜切换
         filterBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFilter = btn.dataset.filter;
-                // 如果冻结中，解冻一瞬再重新冻结？为了照顾体验，不做处理，下一帧刷新时生效
             });
         });
 
-        // ========== 启动摄像头 ==========
+        // 摄像头启动
         async function initCamera() {
             if (initAttempted) return;
             initAttempted = true;
@@ -160,7 +154,6 @@
                     warningEl.textContent = '';
                 });
                 
-                // 超时重试
                 setTimeout(() => {
                     if (!videoReady && video.videoWidth > 0) {
                         videoReady = true;
@@ -184,74 +177,39 @@
             startPixelLoop();
         }
 
-        // ========== HSL 颜色转换工具 ==========
-        function rgbToHsl(r, g, b) {
-            r /= 255; g /= 255; b /= 255;
-            const max = Math.max(r, g, b), min = Math.min(r, g, b);
-            let h, s, l = (max + min) / 2;
-            if (max === min) {
-                h = s = 0;
-            } else {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                    case g: h = ((b - r) / d + 2) / 6; break;
-                    case b: h = ((r - g) / d + 4) / 6; break;
-                }
-            }
-            return { h: h * 360, s, l };
-        }
-
-        function hslToRgb(h, s, l) {
-            h /= 360;
-            let r, g, b;
-            if (s === 0) {
-                r = g = b = l;
-            } else {
-                const hue2rgb = (p, q, t) => {
-                    if (t < 0) t += 1;
-                    if (t > 1) t -= 1;
-                    if (t < 1/6) return p + (q - p) * 6 * t;
-                    if (t < 1/2) return q;
-                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                    return p;
-                };
-                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                const p = 2 * l - q;
-                r = hue2rgb(p, q, h + 1/3);
-                g = hue2rgb(p, q, h);
-                b = hue2rgb(p, q, h - 1/3);
-            }
-            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-        }
-
-        // ========== 对一个小色块应用滤镜（使用 HSL 调整红/蓝模式） ==========
+        // ★ 新：稳定 RGB 处理，不引入 HSL
         function applyFilterToBlock(r, g, b) {
-            const satBoost = 2.0;    // 饱和度增强倍数
-            const lumReduce = 0.6;   // 亮度降低系数
-            const threshold = 40;    // 暗部压黑阈值
+            const satBoost = 1.8;    // 目标通道强度增强
+            const lumReduce = 0.7;   // 整体亮度系数
+            const threshold = 25;    // 暗部压黑阈值
 
             switch (currentFilter) {
                 case 'red': {
-                    let { h, s, l } = rgbToHsl(r, g, b);
-                    s = Math.min(1, s * satBoost);
-                    l = Math.min(1, l * lumReduce);
-                    const [fr, fg, fb] = hslToRgb(h, s, l);
-                    // 红色通道低于阈值直接全黑，保留高饱和红色
-                    return fr < threshold ? [0, 0, 0] : [fr, fg, fb];
+                    // 保留红色为主，混入极少绿、蓝以保留一点点轮廓（否则暗部全黑就无细节）
+                    let rr = r * satBoost;
+                    let gg = g * 0.15;
+                    let bb = b * 0.15;
+                    rr *= lumReduce;
+                    gg *= lumReduce;
+                    bb *= lumReduce;
+                    rr = Math.min(255, rr);
+                    gg = Math.min(255, gg);
+                    bb = Math.min(255, bb);
+                    if (r < threshold) return [0, 0, 0];
+                    return [rr, gg, bb];
                 }
                 case 'blue': {
-                    let { h, s, l } = rgbToHsl(r, g, b);
-                    // 若色相在蓝色附近(180~300度)额外提高饱和度
-                    if (h > 180 && h < 300) {
-                        s = Math.min(1, s * satBoost * 1.2);
-                    } else {
-                        s = Math.min(1, s * satBoost);
-                    }
-                    l = Math.min(1, l * lumReduce);
-                    const [fr, fg, fb] = hslToRgb(h, s, l);
-                    return fb < threshold ? [0, 0, 0] : [fr, fg, fb];
+                    let rr = r * 0.15;
+                    let gg = g * 0.15;
+                    let bb = b * satBoost;
+                    rr *= lumReduce;
+                    gg *= lumReduce;
+                    bb *= lumReduce;
+                    rr = Math.min(255, rr);
+                    gg = Math.min(255, gg);
+                    bb = Math.min(255, bb);
+                    if (b < threshold) return [0, 0, 0];
+                    return [rr, gg, bb];
                 }
                 case 'bw': {
                     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -264,7 +222,7 @@
             }
         }
 
-        // ========== 像素化核心算法 ==========
+        // 像素化核心
         function pixelateFrame() {
             if (!stream || !videoReady || video.readyState < 2) return;
             
@@ -333,7 +291,6 @@
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
         }
 
-        // ========== 动画循环 ==========
         function startPixelLoop() {
             function loop() {
                 if (!frozen) {
@@ -346,7 +303,6 @@
             loop();
         }
 
-        // ========== 冻结/解冻 ==========
         function toggleFreeze() {
             if (frozen) {
                 frozen = false;
@@ -364,7 +320,6 @@
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
-        // ========== 拍照保存 ==========
         captureBtn.addEventListener('click', () => {
             if (canvas.width === 0) return;
             const dataUrl = canvas.toDataURL('image/png');
@@ -374,13 +329,11 @@
             link.click();
         });
 
-        // ========== 像素尺寸滑块 ==========
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
         });
 
-        // ========== 清理 ==========
         window.addEventListener('beforeunload', () => {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -388,7 +341,6 @@
             if (animationId) cancelAnimationFrame(animationId);
         });
 
-        // 启动
         initCamera();
     </script>
 </body>
