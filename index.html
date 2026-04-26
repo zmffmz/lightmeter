@@ -179,9 +179,9 @@
 
         // ★ 新：稳定 RGB 处理，不引入 HSL
         function applyFilterToBlock(r, g, b) {
-            const satBoost = 1.8;    // 目标通道强度增强
+            const satBoost = 2.0;    // 目标通道强度增强
             const lumReduce = 0.7;   // 整体亮度系数
-            const threshold = 25;    // 暗部压黑阈值
+            const threshold = 30;    // 暗部压黑阈值
 
             switch (currentFilter) {
                 case 'red': {
