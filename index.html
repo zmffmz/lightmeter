@@ -235,13 +235,13 @@
             if (frozen) {
                 frozen = false;
                 frozenFrame = null;
-                freezeBtn.textContent = '🧊 冻结';
+                freezeBtn.textContent = '冻结';
             } else {
                 frozen = true;
                 if (canvas.width > 0 && canvas.height > 0) {
                     frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 }
-                freezeBtn.textContent = '🔥 解冻';
+                freezeBtn.textContent = '解冻';
             }
         }
 
