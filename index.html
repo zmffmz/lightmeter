@@ -25,7 +25,7 @@
         video { display: none; }
         canvas {
             display: block; width: 100%; height: 100%;
-            image-rendering: pixelated; /* 保持像素硬边 */
+            image-rendering: pixelated;
         }
         .controls {
             width: 100%; max-width: 500px;
@@ -59,8 +59,8 @@
         button:active { background: #3a3a3a; }
         button.primary { background: #d4af37; color: #000; border-color: #d4af37; }
         .warning {
-            color: #ff7777; font-size: 12px; text-align: center;
-            margin-top: 4px;
+            color: #ff7777; font-size: 14px; text-align: center;
+            margin-top: 4px; padding: 0 20px;
         }
         .info {
             color: #888; font-size: 12px; text-align: center;
@@ -82,7 +82,7 @@
             <button id="freezeBtn">🧊 冻结</button>
             <button id="captureBtn" class="primary">📸 拍照</button>
         </div>
-        <div class="info">点击画面切换冻结 · 触摸对焦</div>
+        <div class="info">点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
 
@@ -99,75 +99,93 @@
         let stream = null;
         let animationId = null;
         let frozen = false;
-        let frozenFrame = null; // 存储冻结时的图像数据
+        let frozenFrame = null;
         let currentPixelSize = 8;
+        let videoReady = false;
+        let initAttempted = false;
 
         // ========== 摄像头初始化 ==========
         async function initCamera() {
+            if (initAttempted) return;
+            initAttempted = true;
+            
+            warningEl.textContent = '正在请求摄像头...';
+            
             try {
+                // 使用更宽松的约束
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 640 } },
+                    video: { facingMode: 'environment', width: 640, height: 640 },
                     audio: false
                 });
                 video.srcObject = stream;
                 await video.play();
                 
-                // 等视频元数据加载后设置 canvas 尺寸
+                // 等待视频准备好
                 video.addEventListener('loadedmetadata', () => {
-                    // 保持正方形裁剪（取中心部分）
-                    const size = Math.min(video.videoWidth, video.videoHeight);
-                    canvas.width = size;
-                    canvas.height = size;
-                    startPixelLoop();
+                    videoReady = true;
+                    setupCanvasAndStart();
+                    warningEl.textContent = '';
                 });
-                warningEl.textContent = '';
+                
+                // 降级：如果 loadedmetadata 没触发，手动检测
+                setTimeout(() => {
+                    if (!videoReady && video.videoWidth > 0) {
+                        videoReady = true;
+                        setupCanvasAndStart();
+                        warningEl.textContent = '';
+                    } else if (!videoReady) {
+                        warningEl.textContent = '摄像头已打开但未获取画面，尝试刷新页面';
+                    }
+                }, 2000);
+                
             } catch (err) {
-                warningEl.textContent = '无法访问摄像头，请授权或使用HTTPS';
-                console.error(err);
+                warningEl.textContent = '摄像头权限被拒绝，请在浏览器设置中允许相机权限后刷新页面';
+                console.error('Camera error:', err);
             }
+        }
+
+        function setupCanvasAndStart() {
+            const size = Math.min(video.videoWidth, video.videoHeight) || 640;
+            canvas.width = size;
+            canvas.height = size;
+            startPixelLoop();
         }
 
         // ========== 像素化核心算法 ==========
         function pixelateFrame() {
-            if (!stream || video.readyState < 2) return;
+            if (!stream || !videoReady || video.readyState < 2) return;
             
-            // 将视频绘制到临时 canvas 截取正方形中心区域
+            const vw = video.videoWidth || 640;
+            const vh = video.videoHeight || 640;
+            const size = Math.min(vw, vh);
+            if (size === 0) return;
+            
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
-            const vw = video.videoWidth;
-            const vh = video.videoHeight;
-            const size = Math.min(vw, vh);
             tempCanvas.width = size;
             tempCanvas.height = size;
             
-            // 计算裁剪起始点（中心裁剪）
             const sx = (vw - size) / 2;
             const sy = (vh - size) / 2;
             tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
             
-            // 获取图像数据
             const imageData = tempCtx.getImageData(0, 0, size, size);
             const data = imageData.data;
             
-            // 像素化：缩小到 blockSize 分辨率再放大
             const blockSize = currentPixelSize;
             const smallW = Math.floor(size / blockSize);
             const smallH = Math.floor(size / blockSize);
             
-            // 创建小型离屏 canvas 绘制缩小图像
             const smallCanvas = document.createElement('canvas');
             smallCanvas.width = smallW;
             smallCanvas.height = smallH;
             const smallCtx = smallCanvas.getContext('2d');
-            // 关闭平滑，保持硬边
             smallCtx.imageSmoothingEnabled = false;
             
-            // 方法：遍历每个大块，计算平均颜色，然后填充到小 canvas
             const smallImageData = smallCtx.createImageData(smallW, smallH);
             for (let y = 0; y < smallH; y++) {
                 for (let x = 0; x < smallW; x++) {
                     let r = 0, g = 0, b = 0, count = 0;
-                    // 计算源图中对应 block 的平均颜色
                     const startX = x * blockSize;
                     const startY = y * blockSize;
                     const endX = Math.min(startX + blockSize, size);
@@ -195,7 +213,6 @@
             }
             smallCtx.putImageData(smallImageData, 0, 0);
             
-            // 将小图像放大回原尺寸
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
         }
@@ -206,7 +223,6 @@
                 if (!frozen) {
                     pixelateFrame();
                 } else if (frozenFrame) {
-                    // 冻结时直接绘制存储的帧
                     ctx.putImageData(frozenFrame, 0, 0);
                 }
                 animationId = requestAnimationFrame(loop);
@@ -220,13 +236,12 @@
                 frozen = false;
                 frozenFrame = null;
                 freezeBtn.textContent = '🧊 冻结';
-                freezeBtn.classList.remove('active');
             } else {
                 frozen = true;
-                // 保存当前帧
-                frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                if (canvas.width > 0 && canvas.height > 0) {
+                    frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                }
                 freezeBtn.textContent = '🔥 解冻';
-                freezeBtn.classList.add('active');
             }
         }
 
@@ -235,8 +250,7 @@
 
         // ========== 拍照保存 ==========
         captureBtn.addEventListener('click', () => {
-            if (!stream) return;
-            // 如果处于冻结状态，直接保存冻结帧；否则临时冻结一帧保存
+            if (canvas.width === 0) return;
             const dataUrl = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.download = 'pixel_photo.png';
