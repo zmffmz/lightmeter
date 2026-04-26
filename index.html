@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>实时像素化摄像头</title>
+    <title>像素化滤镜相机 · 红黑/蓝黑/黑白</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
@@ -20,7 +20,7 @@
             max-width: 500px; max-height: 500px;
             background: #111; overflow: hidden;
             border: 2px solid #333;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         video { display: none; }
         canvas {
@@ -30,7 +30,19 @@
         .controls {
             width: 100%; max-width: 500px;
             padding: 0 20px;
-            display: flex; flex-direction: column; gap: 12px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .filter-row {
+            display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: #1a1a1a; border: 1px solid #444;
+            color: #888; padding: 8px 14px; border-radius: 20px;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: #d4af37; color: #000; border-color: #d4af37;
         }
         .slider-group {
             display: flex; align-items: center; gap: 12px;
@@ -59,11 +71,12 @@
         button:active { background: #3a3a3a; }
         button.primary { background: #d4af37; color: #000; border-color: #d4af37; }
         .warning {
-            color: #ff7777; font-size: 14px; text-align: center;
-            margin-top: 4px; padding: 0 20px;
+            color: #ff7777; font-size: 13px; text-align: center;
+            margin-top: 2px; padding: 0 20px;
         }
         .info {
             color: #888; font-size: 12px; text-align: center;
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -73,20 +86,30 @@
         <canvas id="outputCanvas"></canvas>
     </div>
     <div class="controls">
+        <!-- 滤镜模式按钮 -->
+        <div class="filter-row">
+            <button class="filter-btn active" data-filter="none">🎨 原色</button>
+            <button class="filter-btn" data-filter="red">🔴 红黑</button>
+            <button class="filter-btn" data-filter="blue">🔵 蓝黑</button>
+            <button class="filter-btn" data-filter="bw">⚫ 黑白</button>
+        </div>
+        <!-- 像素尺寸 -->
         <div class="slider-group">
             <label>像素尺寸</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
+        <!-- 冻结/拍照 -->
         <div class="btn-row">
-            <button id="freezeBtn">冻结</button>
-            <button id="captureBtn" class="primary">拍照</button>
+            <button id="freezeBtn">🧊 冻结</button>
+            <button id="captureBtn" class="primary">📸 拍照</button>
         </div>
-        <div class="info">点击画面切换冻结</div>
+        <div class="info">点击画面切换冻结 · 触摸对焦</div>
         <div class="warning" id="warning"></div>
     </div>
 
     <script>
+        // ========== DOM 元素 ==========
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -95,24 +118,38 @@
         const freezeBtn = document.getElementById('freezeBtn');
         const captureBtn = document.getElementById('captureBtn');
         const warningEl = document.getElementById('warning');
+        const filterBtns = document.querySelectorAll('.filter-btn');
 
+        // ========== 状态变量 ==========
         let stream = null;
         let animationId = null;
         let frozen = false;
         let frozenFrame = null;
         let currentPixelSize = 8;
+        let currentFilter = 'none';  // 'none' | 'red' | 'blue' | 'bw'
         let videoReady = false;
         let initAttempted = false;
 
-        // ========== 摄像头初始化 ==========
+        // ========== 滤镜切换按钮事件 ==========
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // 更新 active 样式
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // 设置当前滤镜
+                currentFilter = btn.dataset.filter;
+                // 如果当前冻结，需要重绘冻结帧（用新滤镜处理原视频帧？无法，保持已冻结图像不变）
+                // 不强制重绘，下一帧会生效
+            });
+        });
+
+        // ========== 启动摄像头 ==========
         async function initCamera() {
             if (initAttempted) return;
             initAttempted = true;
-            
             warningEl.textContent = '正在请求摄像头...';
             
             try {
-                // 使用更宽松的约束
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment', width: 640, height: 640 },
                     audio: false
@@ -120,14 +157,12 @@
                 video.srcObject = stream;
                 await video.play();
                 
-                // 等待视频准备好
                 video.addEventListener('loadedmetadata', () => {
                     videoReady = true;
                     setupCanvasAndStart();
                     warningEl.textContent = '';
                 });
                 
-                // 降级：如果 loadedmetadata 没触发，手动检测
                 setTimeout(() => {
                     if (!videoReady && video.videoWidth > 0) {
                         videoReady = true;
@@ -151,7 +186,30 @@
             startPixelLoop();
         }
 
-        // ========== 像素化核心算法 ==========
+        // ========== 对一个小色块应用滤镜 ==========
+        function applyFilterToBlock(r, g, b) {
+            switch (currentFilter) {
+                case 'red':
+                    // 只保留红色通道，根据亮度压暗部
+                    const rValue = r;
+                    const rDark = rValue < 40 ? 0 : rValue; // 暗部直接黑
+                    return [rDark, 0, 0];
+                case 'blue':
+                    const bValue = b;
+                    const bDark = bValue < 40 ? 0 : bValue;
+                    return [0, 0, bDark];
+                case 'bw':
+                    // 高反差灰度
+                    const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    const contrast = gray < 128 ? 0 : 255;
+                    return [contrast, contrast, contrast];
+                case 'none':
+                default:
+                    return [r, g, b];
+            }
+        }
+
+        // ========== 像素化核心算法（集成滤镜） ==========
         function pixelateFrame() {
             if (!stream || !videoReady || video.readyState < 2) return;
             
@@ -183,9 +241,10 @@
             smallCtx.imageSmoothingEnabled = false;
             
             const smallImageData = smallCtx.createImageData(smallW, smallH);
+            
             for (let y = 0; y < smallH; y++) {
                 for (let x = 0; x < smallW; x++) {
-                    let r = 0, g = 0, b = 0, count = 0;
+                    let sumR = 0, sumG = 0, sumB = 0, count = 0;
                     const startX = x * blockSize;
                     const startY = y * blockSize;
                     const endX = Math.min(startX + blockSize, size);
@@ -194,20 +253,23 @@
                     for (let sy2 = startY; sy2 < endY; sy2++) {
                         for (let sx2 = startX; sx2 < endX; sx2++) {
                             const idx = (sy2 * size + sx2) * 4;
-                            r += data[idx];
-                            g += data[idx + 1];
-                            b += data[idx + 2];
+                            sumR += data[idx];
+                            sumG += data[idx + 1];
+                            sumB += data[idx + 2];
                             count++;
                         }
                     }
-                    r = Math.round(r / count);
-                    g = Math.round(g / count);
-                    b = Math.round(b / count);
+                    let avgR = Math.round(sumR / count);
+                    let avgG = Math.round(sumG / count);
+                    let avgB = Math.round(sumB / count);
+                    
+                    // ★ 应用当前滤镜
+                    const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
                     
                     const smallIdx = (y * smallW + x) * 4;
-                    smallImageData.data[smallIdx] = r;
-                    smallImageData.data[smallIdx + 1] = g;
-                    smallImageData.data[smallIdx + 2] = b;
+                    smallImageData.data[smallIdx] = fr;
+                    smallImageData.data[smallIdx + 1] = fg;
+                    smallImageData.data[smallIdx + 2] = fb;
                     smallImageData.data[smallIdx + 3] = 255;
                 }
             }
@@ -235,13 +297,13 @@
             if (frozen) {
                 frozen = false;
                 frozenFrame = null;
-                freezeBtn.textContent = '冻结';
+                freezeBtn.textContent = '🧊 冻结';
             } else {
                 frozen = true;
                 if (canvas.width > 0 && canvas.height > 0) {
                     frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 }
-                freezeBtn.textContent = '解冻';
+                freezeBtn.textContent = '🔥 解冻';
             }
         }
 
@@ -258,7 +320,7 @@
             link.click();
         });
 
-        // ========== 像素大小调节 ==========
+        // ========== 像素尺寸滑块 ==========
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
