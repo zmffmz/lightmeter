@@ -407,6 +407,7 @@
         }
 
         // ========== 通用像素化处理 ==========
+
         function pixelateData(imageData, size) {
             const data = imageData.data;
             const blockSize = currentPixelSize;
@@ -448,6 +449,29 @@
                     let avgR = Math.round(sumR / count);
                     let avgG = Math.round(sumG / count);
                     let avgB = Math.round(sumB / count);
+                    
+                    // ★ 原色模式：增强饱和度和对比度，抵消圆点间隙带来的发灰
+                    if (currentFilter === 'none') {
+                        const rNorm = avgR / 255, gNorm = avgG / 255, bNorm = avgB / 255;
+                        const max = Math.max(rNorm, gNorm, bNorm);
+                        const min = Math.min(rNorm, gNorm, bNorm);
+                        const l = (max + min) / 2;
+                        let s = 0;
+                        if (max !== min) {
+                            s = l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
+                        }
+                        s = Math.min(1, s * 1.4);
+                        
+                        const contrastFactor = 1.15;
+                        avgR = Math.min(255, Math.max(0, ((rNorm - 0.5) * contrastFactor + 0.5) * 255));
+                        avgG = Math.min(255, Math.max(0, ((gNorm - 0.5) * contrastFactor + 0.5) * 255));
+                        avgB = Math.min(255, Math.max(0, ((bNorm - 0.5) * contrastFactor + 0.5) * 255));
+                        
+                        const gray = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+                        avgR = Math.min(255, Math.max(0, gray + (avgR - gray) * 1.4));
+                        avgG = Math.min(255, Math.max(0, gray + (avgG - gray) * 1.4));
+                        avgB = Math.min(255, Math.max(0, gray + (avgB - gray) * 1.4));
+                    }
                     
                     const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
                     
