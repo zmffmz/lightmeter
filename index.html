@@ -572,14 +572,28 @@
                 }
 
                 // 如果正在录制，将当前帧加入 GIF
-                if (recording && gifEncoder && canvas.width > 0) {
-                    gifFrames++;
-                    gifEncoder.addFrame(ctx, { copy: true, delay: 1000 / 12 });
-                    // 限制最大帧数（约 10 秒）
-                    if (gifFrames >= 120) {
-                        stopRecording();
+                       // 在 loop 函数内，pixelateFrame() 之后
+        if (recording && gifEncoder && canvas.width > 0 && !frozen) {
+    // 节流：每 3 帧才记录一次（约 20fps -> 6-7fps GIF）
+            if (gifFrames % 3 === 0) {
+           try {
+            // 缩小帧尺寸以减少编码压力
+                const smallFrame = document.createElement('canvas');
+                const scale = Math.min(1, 200 / canvas.width); // 最大 200px 宽
+                smallFrame.width = Math.floor(canvas.width * scale);
+                smallFrame.height = Math.floor(canvas.height * scale);
+                const sfCtx = smallFrame.getContext('2d');
+                sfCtx.drawImage(canvas, 0, 0, smallFrame.width, smallFrame.height);
+                gifEncoder.addFrame(sfCtx, { copy: true, delay: 120 }); // ~8fps
+                } catch(e) {
+                    console.warn('gif addFrame error', e);
                     }
-                }
+            }
+                gifFrames++;
+            if (gifFrames > 90) { // 最多约 10 秒
+                stopRecording();
+            }
+        }
 
                 animationId = requestAnimationFrame(loop);
             }
