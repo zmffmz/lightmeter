@@ -87,6 +87,11 @@
         }
         button:active { background: #3a3a3a; }
         button.primary { background: #d4af37; color: #000; border-color: #d4af37; }
+        button.recording { background: #c0392b; color: #fff; border-color: #c0392b; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
         .warning {
             color: #ff7777; font-size: 13px; text-align: center;
             margin-top: 2px; padding: 0 20px;
@@ -96,6 +101,8 @@
             margin-top: 2px;
         }
     </style>
+    <!-- GIF 编码库 -->
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
     <div id="viewfinder">
@@ -134,9 +141,10 @@
             <button id="cameraBtn">拍照</button>
             <button id="switchCameraBtn">切换</button>
             <button id="freezeBtn">冻结</button>
+            <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v2.41· 点击画面切换冻结</div>
+        <div class="info">v2.5 · 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -157,6 +165,7 @@
         const colorDepthRow = document.getElementById('colorDepthRow');
         const freezeBtn = document.getElementById('freezeBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const recordBtn = document.getElementById('recordBtn');
         const switchCameraBtn = document.getElementById('switchCameraBtn');
         const uploadBtn = document.getElementById('uploadBtn');
         const cameraBtn = document.getElementById('cameraBtn');
@@ -185,6 +194,11 @@
         let colorDepth = 220;
         let uploadedImage = null;
         let mode = 'camera';
+
+        // ========== GIF 录制状态 ==========
+        let recording = false;
+        let gifEncoder = null;
+        let gifFrames = 0;
 
         // ========== 圆点遮罩缓存 ==========
         let cachedMask = null;
@@ -242,6 +256,7 @@
 
         // ========== 切换到摄像头模式 ==========
         async function switchToCamera() {
+            if (recording) stopRecording();
             stopCamera();
             mode = 'camera';
             uploadedImage = null;
@@ -255,6 +270,7 @@
 
         // ========== 切换到上传模式 ==========
         function switchToUpload(img) {
+            if (recording) stopRecording();
             stopCamera();
             mode = 'upload';
             uploadedImage = img;
@@ -407,7 +423,6 @@
         }
 
         // ========== 通用像素化处理 ==========
-
         function pixelateData(imageData, size) {
             const data = imageData.data;
             const blockSize = currentPixelSize;
@@ -450,7 +465,7 @@
                     let avgG = Math.round(sumG / count);
                     let avgB = Math.round(sumB / count);
                     
-                    // ★ 原色模式：增强饱和度和对比度，抵消圆点间隙带来的发灰
+                    // 原色模式：增强饱和度和对比度
                     if (currentFilter === 'none') {
                         const rNorm = avgR / 255, gNorm = avgG / 255, bNorm = avgB / 255;
                         const max = Math.max(rNorm, gNorm, bNorm);
@@ -555,6 +570,17 @@
                 } else if (frozenFrame) {
                     ctx.putImageData(frozenFrame, 0, 0);
                 }
+
+                // 如果正在录制，将当前帧加入 GIF
+                if (recording && gifEncoder && canvas.width > 0) {
+                    gifFrames++;
+                    gifEncoder.addFrame(ctx, { copy: true, delay: 1000 / 12 });
+                    // 限制最大帧数（约 10 秒）
+                    if (gifFrames >= 120) {
+                        stopRecording();
+                    }
+                }
+
                 animationId = requestAnimationFrame(loop);
             }
             loop();
@@ -577,6 +603,51 @@
 
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
+
+        // ========== GIF 录制 ==========
+        function startRecording() {
+            if (mode !== 'camera') return;
+            recording = true;
+            gifFrames = 0;
+            recordBtn.textContent = '停止';
+            recordBtn.classList.add('recording');
+            gifEncoder = new GIF({
+                workers: 2,
+                quality: 10,
+                width: canvas.width,
+                height: canvas.height,
+                workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
+            });
+        }
+
+        function stopRecording() {
+            if (!recording) return;
+            recording = false;
+            recordBtn.textContent = '录制';
+            recordBtn.classList.remove('recording');
+
+            if (gifEncoder && gifFrames > 0) {
+                gifEncoder.on('finished', function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'pixel_animation.gif';
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                });
+                gifEncoder.render();
+            }
+            gifEncoder = null;
+            gifFrames = 0;
+        }
+
+        recordBtn.addEventListener('click', () => {
+            if (!recording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
 
         // ========== 保存下载 ==========
         downloadBtn.addEventListener('click', () => {
