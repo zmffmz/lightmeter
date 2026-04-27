@@ -460,9 +460,9 @@
                         if (max !== min) {
                             s = l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
                         }
-                        s = Math.min(1, s * 1.4);
+                        s = Math.min(1, s * 1.8);
                         
-                        const contrastFactor = 1.15;
+                        const contrastFactor = 1.50;
                         avgR = Math.min(255, Math.max(0, ((rNorm - 0.5) * contrastFactor + 0.5) * 255));
                         avgG = Math.min(255, Math.max(0, ((gNorm - 0.5) * contrastFactor + 0.5) * 255));
                         avgB = Math.min(255, Math.max(0, ((bNorm - 0.5) * contrastFactor + 0.5) * 255));
