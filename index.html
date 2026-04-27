@@ -144,7 +144,7 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v2.6 · 点击画面切换冻结</div>
+        <div class="info">v2.61 · 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -571,29 +571,27 @@
                     ctx.putImageData(frozenFrame, 0, 0);
                 }
 
-                // 如果正在录制，将当前帧加入 GIF
-                       // 在 loop 函数内，pixelateFrame() 之后
-        if (recording && gifEncoder && canvas.width > 0 && !frozen) {
-    // 节流：每 3 帧才记录一次（约 20fps -> 6-7fps GIF）
-            if (gifFrames % 3 === 0) {
-           try {
-            // 缩小帧尺寸以减少编码压力
-                const smallFrame = document.createElement('canvas');
-                const scale = Math.min(1, 200 / canvas.width); // 最大 200px 宽
-                smallFrame.width = Math.floor(canvas.width * scale);
-                smallFrame.height = Math.floor(canvas.height * scale);
-                const sfCtx = smallFrame.getContext('2d');
-                sfCtx.drawImage(canvas, 0, 0, smallFrame.width, smallFrame.height);
-                gifEncoder.addFrame(sfCtx, { copy: true, delay: 120 }); // ~8fps
-                } catch(e) {
-                    console.warn('gif addFrame error', e);
+                // GIF 录制（节流 + 缩小帧尺寸，防止卡死）
+                if (recording && gifEncoder && canvas.width > 0 && !frozen) {
+                    // 每 3 帧记录一次（约 20fps -> 6-7fps GIF）
+                    if (gifFrames % 3 === 0) {
+                        try {
+                            const smallFrame = document.createElement('canvas');
+                            const scale = Math.min(1, 200 / canvas.width);
+                            smallFrame.width = Math.floor(canvas.width * scale);
+                            smallFrame.height = Math.floor(canvas.height * scale);
+                            const sfCtx = smallFrame.getContext('2d');
+                            sfCtx.drawImage(canvas, 0, 0, smallFrame.width, smallFrame.height);
+                            gifEncoder.addFrame(sfCtx, { copy: true, delay: 120 });
+                        } catch(e) {
+                            console.warn('gif addFrame error', e);
+                        }
                     }
-            }
-                gifFrames++;
-            if (gifFrames > 90) { // 最多约 10 秒
-                stopRecording();
-            }
-        }
+                    gifFrames++;
+                    if (gifFrames > 90) {
+                        stopRecording();
+                    }
+                }
 
                 animationId = requestAnimationFrame(loop);
             }
@@ -627,9 +625,9 @@
             recordBtn.classList.add('recording');
             gifEncoder = new GIF({
                 workers: 2,
-                quality: 10,
-                width: canvas.width,
-                height: canvas.height,
+                quality: 20,
+                width: Math.min(200, canvas.width),
+                height: Math.min(200, canvas.height),
                 workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
             });
         }
