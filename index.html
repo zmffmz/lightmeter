@@ -369,76 +369,70 @@
 
         // ========== 通用像素化处理（摄像头和上传共用） ==========
         function pixelateData(imageData, size) {
-            const data = imageData.data;
-            const blockSize = currentPixelSize;
-            const smallW = Math.floor(size / blockSize);
-            const smallH = Math.floor(size / blockSize);
+    const data = imageData.data;
+    const blockSize = currentPixelSize;
+    // 清除画布，准备直接画圆点
+    ctx.clearRect(0, 0, size, size);
+
+    // 遍历每个方块
+    for (let y = 0; y < size; y += blockSize) {
+        for (let x = 0; x < size; x += blockSize) {
+            let sumR = 0, sumG = 0, sumB = 0, count = 0;
+            const endX = Math.min(x + blockSize, size);
+            const endY = Math.min(y + blockSize, size);
             
-            const smallCanvas = document.createElement('canvas');
-            smallCanvas.width = smallW;
-            smallCanvas.height = smallH;
-            const smallCtx = smallCanvas.getContext('2d');
-            smallCtx.imageSmoothingEnabled = false;
-            
-            const smallImageData = smallCtx.createImageData(smallW, smallH);
-            
-            for (let y = 0; y < smallH; y++) {
-                for (let x = 0; x < smallW; x++) {
-                    let sumR = 0, sumG = 0, sumB = 0, count = 0;
-                    const startX = x * blockSize;
-                    const startY = y * blockSize;
-                    const endX = Math.min(startX + blockSize, size);
-                    const endY = Math.min(startY + blockSize, size);
-                    
-                    for (let sy2 = startY; sy2 < endY; sy2++) {
-                        for (let sx2 = startX; sx2 < endX; sx2++) {
-                            const idx = (sy2 * size + sx2) * 4;
-                            sumR += data[idx];
-                            sumG += data[idx + 1];
-                            sumB += data[idx + 2];
-                            count++;
-                        }
-                    }
-                    let avgR = Math.round(sumR / count);
-                    let avgG = Math.round(sumG / count);
-                    let avgB = Math.round(sumB / count);
-                    
-                    const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
-                    
-                    const smallIdx = (y * smallW + x) * 4;
-                    smallImageData.data[smallIdx] = fr;
-                    smallImageData.data[smallIdx + 1] = fg;
-                    smallImageData.data[smallIdx + 2] = fb;
-                    smallImageData.data[smallIdx + 3] = 255;
+            // 计算该方块的平均颜色
+            for (let sy = y; sy < endY; sy++) {
+                for (let sx = x; sx < endX; sx++) {
+                    const idx = (sy * size + sx) * 4;
+                    sumR += data[idx];
+                    sumG += data[idx + 1];
+                    sumB += data[idx + 2];
+                    count++;
                 }
             }
-            smallCtx.putImageData(smallImageData, 0, 0);
             
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
+            let avgR = Math.round(sumR / count);
+            let avgG = Math.round(sumG / count);
+            let avgB = Math.round(sumB / count);
+            
+            // 应用滤镜
+            const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
+            ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
+            
+            // 画圆点
+            const centerX = x + blockSize / 2;
+            const centerY = y + blockSize / 2;
+            const radius = (blockSize / 2) * 0.85; // 0.85 让圆点之间有点空隙，更像点阵
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
         }
+    }
+}
 
         // ========== 摄像头像素化 ==========
         function pixelateFrame() {
-            if (!stream || !videoReady || video.readyState < 2) return;
-            
-            const vw = video.videoWidth || 640;
-            const vh = video.videoHeight || 640;
-            const size = Math.min(vw, vh);
-            if (size === 0) return;
-            
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = size;
-            tempCanvas.height = size;
-            
-            const sx = (vw - size) / 2;
-            const sy = (vh - size) / 2;
-            tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-            
-            const imageData = tempCtx.getImageData(0, 0, size, size);
-            pixelateData(imageData, size);
-        }
+    if (!stream || !videoReady || video.readyState < 2) return;
+    
+    const vw = video.videoWidth || 640;
+    const vh = video.videoHeight || 640;
+    const size = Math.min(vw, vh);
+    if (size === 0) return;
+    
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = size;
+    tempCanvas.height = size;
+    
+    const sx = (vw - size) / 2;
+    const sy = (vh - size) / 2;
+    tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+    
+    const imageData = tempCtx.getImageData(0, 0, size, size);
+    pixelateData(imageData, size); // 调用上面修改后的通用函数
+}
 
         // ========== 动画循环（仅摄像头模式） ==========
         function startPixelLoop() {
