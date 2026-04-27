@@ -125,7 +125,7 @@
             <button id="freezeBtn">冻结</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v1.1 点击画面切换冻结</div>
+        <div class="info">v2.1 · 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <!-- 隐藏的文件选择器 -->
@@ -166,8 +166,13 @@
         let initAttempted = false;
         let thresholdValue_user = 80;
         let colorDepth = 220;
-        let uploadedImage = null;      // 存储上传的照片
-        let mode = 'camera';           // 'camera' 或 'upload'
+        let uploadedImage = null;
+        let mode = 'camera';
+
+        // ========== 圆点遮罩缓存 ==========
+        let cachedMask = null;
+        let cachedMaskBlockSize = 0;
+        let cachedMaskSize = 0;
 
         // ========== 滑块事件 ==========
         thresholdSlider.addEventListener('input', () => {
@@ -192,7 +197,7 @@
                     thresholdRow.style.display = 'none';
                     colorDepthRow.style.display = 'none';
                 }
-                // 如果有上传的图片，重新处理
+                // 清除遮罩缓存（滤镜变了颜色会变，但遮罩是透明的，无需清缓存）
                 if (mode === 'upload' && uploadedImage) {
                     processImage();
                 }
@@ -317,6 +322,10 @@
             const size = Math.min(video.videoWidth, video.videoHeight) || 640;
             canvas.width = size;
             canvas.height = size;
+            // 清除遮罩缓存（canvas尺寸可能变了）
+            cachedMask = null;
+            cachedMaskBlockSize = 0;
+            cachedMaskSize = 0;
             startPixelLoop();
         }
 
@@ -324,7 +333,6 @@
         function processImage() {
             if (!uploadedImage) return;
             
-            // 保持正方形裁剪
             const imgW = uploadedImage.width;
             const imgH = uploadedImage.height;
             const size = Math.min(imgW, imgH);
@@ -332,7 +340,11 @@
             canvas.width = size;
             canvas.height = size;
             
-            // 画到临时canvas
+            // 清除遮罩缓存
+            cachedMask = null;
+            cachedMaskBlockSize = 0;
+            cachedMaskSize = 0;
+            
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = size;
@@ -350,12 +362,16 @@
         function applyFilterToBlock(r, g, b) {
             switch (currentFilter) {
                 case 'red': {
-                    if (r >= thresholdValue_user) return [colorDepth, 15, 15];
-                    return [0, 0, 0];
+                    if (r >= thresholdValue_user) return [colorDepth, Math.min(255, Math.round(colorDepth * 0.07)), Math.min(255, Math.round(colorDepth * 0.07))];
+                    if (r < 15) return [0, 0, 0];
+                    const fade = r / thresholdValue_user;
+                    return [Math.round(colorDepth * fade), Math.round(colorDepth * 0.07 * fade), Math.round(colorDepth * 0.07 * fade)];
                 }
                 case 'blue': {
-                    if (b >= thresholdValue_user) return [15, 15, colorDepth];
-                    return [0, 0, 0];
+                    if (b >= thresholdValue_user) return [Math.min(255, Math.round(colorDepth * 0.07)), Math.min(255, Math.round(colorDepth * 0.07)), colorDepth];
+                    if (b < 15) return [0, 0, 0];
+                    const fade = b / thresholdValue_user;
+                    return [Math.round(colorDepth * 0.07 * fade), Math.round(colorDepth * 0.07 * fade), Math.round(colorDepth * fade)];
                 }
                 case 'bw': {
                     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -367,142 +383,110 @@
             }
         }
 
-        // ========== 通用像素化处理（摄像头和上传共用） ==========
-    function pixelateData(imageData, size) {
-    const data = imageData.data;
-    const blockSize = currentPixelSize;
-    const smallW = Math.floor(size / blockSize);
-    const smallH = Math.floor(size / blockSize);
-    
-    // ===== 第一步：像素化（小图放大） =====
-    const smallCanvas = document.createElement('canvas');
-    smallCanvas.width = smallW;
-    smallCanvas.height = smallH;
-    const smallCtx = smallCanvas.getContext('2d');
-    smallCtx.imageSmoothingEnabled = false;
-    
-    const smallImageData = smallCtx.createImageData(smallW, smallH);
-    
-    for (let y = 0; y < smallH; y++) {
-        for (let x = 0; x < smallW; x++) {
-            let sumR = 0, sumG = 0, sumB = 0, count = 0;
-            const startX = x * blockSize;
-            const startY = y * blockSize;
-            const endX = Math.min(startX + blockSize, size);
-            const endY = Math.min(startY + blockSize, size);
+        // ========== 通用像素化处理 ==========
+        function pixelateData(imageData, size) {
+            const data = imageData.data;
+            const blockSize = currentPixelSize;
+            const smallW = Math.floor(size / blockSize);
+            const smallH = Math.floor(size / blockSize);
             
-            for (let sy = startY; sy < endY; sy++) {
-                for (let sx = startX; sx < endX; sx++) {
-                    const idx = (sy * size + sx) * 4;
-                    sumR += data[idx];
-                    sumG += data[idx + 1];
-                    sumB += data[idx + 2];
-                    count++;
+            const smallCanvas = document.createElement('canvas');
+            smallCanvas.width = smallW;
+            smallCanvas.height = smallH;
+            const smallCtx = smallCanvas.getContext('2d');
+            smallCtx.imageSmoothingEnabled = false;
+            
+            const smallImageData = smallCtx.createImageData(smallW, smallH);
+            
+            for (let y = 0; y < smallH; y++) {
+                for (let x = 0; x < smallW; x++) {
+                    let sumR = 0, sumG = 0, sumB = 0, count = 0;
+                    const startX = x * blockSize;
+                    const startY = y * blockSize;
+                    const endX = Math.min(startX + blockSize, size);
+                    const endY = Math.min(startY + blockSize, size);
+                    
+                    for (let sy = startY; sy < endY; sy++) {
+                        for (let sx = startX; sx < endX; sx++) {
+                            const idx = (sy * size + sx) * 4;
+                            sumR += data[idx];
+                            sumG += data[idx + 1];
+                            sumB += data[idx + 2];
+                            count++;
+                        }
+                    }
+                    let avgR = Math.round(sumR / count);
+                    let avgG = Math.round(sumG / count);
+                    let avgB = Math.round(sumB / count);
+                    
+                    const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
+                    
+                    const smallIdx = (y * smallW + x) * 4;
+                    smallImageData.data[smallIdx] = fr;
+                    smallImageData.data[smallIdx + 1] = fg;
+                    smallImageData.data[smallIdx + 2] = fb;
+                    smallImageData.data[smallIdx + 3] = 255;
                 }
             }
-            let avgR = Math.round(sumR / count);
-            let avgG = Math.round(sumG / count);
-            let avgB = Math.round(sumB / count);
+            smallCtx.putImageData(smallImageData, 0, 0);
             
-            const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
             
-            const smallIdx = (y * smallW + x) * 4;
-            smallImageData.data[smallIdx] = fr;
-            smallImageData.data[smallIdx + 1] = fg;
-            smallImageData.data[smallIdx + 2] = fb;
-            smallImageData.data[smallIdx + 3] = 255;
-        }
-    }
-    smallCtx.putImageData(smallImageData, 0, 0);
-    
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
-    
-    // ===== 第二步：仅在 blockSize >= 6 时叠加圆点遮罩 =====
-    if (blockSize >= 6) {
-        const maskCanvas = document.createElement('canvas');
-        maskCanvas.width = canvas.width;
-        maskCanvas.height = canvas.height;
-        const maskCtx = maskCanvas.getContext('2d');
-        
-        maskCtx.fillStyle = '#000';
-        maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-        
-        const radius = (blockSize / 2) * 0.85;
-        
-        for (let y = 0; y < canvas.height; y += blockSize) {
-            for (let x = 0; x < canvas.width; x += blockSize) {
-                const centerX = x + blockSize / 2;
-                const centerY = y + blockSize / 2;
-                maskCtx.globalCompositeOperation = 'destination-out';
-                maskCtx.beginPath();
-                maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                maskCtx.fill();
+            // ===== 圆点遮罩（仅在 blockSize >= 4 时，带缓存） =====
+            if (blockSize >= 4) {
+                if (!cachedMask || cachedMaskBlockSize !== blockSize || cachedMaskSize !== canvas.width) {
+                    const maskCanvas = document.createElement('canvas');
+                    maskCanvas.width = canvas.width;
+                    maskCanvas.height = canvas.height;
+                    const maskCtx = maskCanvas.getContext('2d');
+                    
+                    maskCtx.fillStyle = '#000';
+                    maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+                    
+                    const radius = (blockSize / 2) * 0.85;
+                    
+                    for (let y = 0; y < canvas.height; y += blockSize) {
+                        for (let x = 0; x < canvas.width; x += blockSize) {
+                            const centerX = x + blockSize / 2;
+                            const centerY = y + blockSize / 2;
+                            maskCtx.globalCompositeOperation = 'destination-out';
+                            maskCtx.beginPath();
+                            maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                            maskCtx.fill();
+                        }
+                    }
+                    
+                    cachedMask = maskCanvas;
+                    cachedMaskBlockSize = blockSize;
+                    cachedMaskSize = canvas.width;
+                }
+                
+                ctx.drawImage(cachedMask, 0, 0);
             }
         }
-        
-        ctx.drawImage(maskCanvas, 0, 0);
-    }
-    // blockSize < 6 时直接保留方形像素，不做圆点处理
-}
-    smallCtx.putImageData(smallImageData, 0, 0);
-    
-    // 放大到最终画布
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
-    
-    // ===== 第二步：叠加圆形遮罩 =====
-    // 创建一个临时的遮罩画布，画上黑色背景 + 透明圆孔
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = canvas.width;
-    maskCanvas.height = canvas.height;
-    const maskCtx = maskCanvas.getContext('2d');
-    
-    // 先铺满黑色（会把方块之间的缝隙染黑，但圆孔会透出像素色）
-    maskCtx.fillStyle = '#000';
-    maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-    
-    // 在每个像素块中心画透明圆孔
-    const radius = (blockSize / 2) * 0.85; // 可调：0.85 是圆点大小
-    
-    for (let y = 0; y < canvas.height; y += blockSize) {
-        for (let x = 0; x < canvas.width; x += blockSize) {
-            const centerX = x + blockSize / 2;
-            const centerY = y + blockSize / 2;
-            
-            // 用 destination-out 模式挖孔（把黑色变成透明）
-            maskCtx.globalCompositeOperation = 'destination-out';
-            maskCtx.beginPath();
-            maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            maskCtx.fill();
-        }
-    }
-    
-    // 将遮罩盖到主画布上
-    ctx.drawImage(maskCanvas, 0, 0);
-}
 
         // ========== 摄像头像素化 ==========
         function pixelateFrame() {
-    if (!stream || !videoReady || video.readyState < 2) return;
-    
-    const vw = video.videoWidth || 640;
-    const vh = video.videoHeight || 640;
-    const size = Math.min(vw, vh);
-    if (size === 0) return;
-    
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCanvas.width = size;
-    tempCanvas.height = size;
-    
-    const sx = (vw - size) / 2;
-    const sy = (vh - size) / 2;
-    tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-    
-    const imageData = tempCtx.getImageData(0, 0, size, size);
-    pixelateData(imageData, size); // 调用上面修改后的通用函数
-}
+            if (!stream || !videoReady || video.readyState < 2) return;
+            
+            const vw = video.videoWidth || 640;
+            const vh = video.videoHeight || 640;
+            const size = Math.min(vw, vh);
+            if (size === 0) return;
+            
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            
+            const sx = (vw - size) / 2;
+            const sy = (vh - size) / 2;
+            tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+            
+            const imageData = tempCtx.getImageData(0, 0, size, size);
+            pixelateData(imageData, size);
+        }
 
         // ========== 动画循环（仅摄像头模式） ==========
         function startPixelLoop() {
@@ -553,6 +537,10 @@
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
+            // 清除遮罩缓存
+            cachedMask = null;
+            cachedMaskBlockSize = 0;
+            cachedMaskSize = 0;
             if (mode === 'upload' && uploadedImage) {
                 processImage();
             }
