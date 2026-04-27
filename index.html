@@ -125,7 +125,7 @@
             <button id="freezeBtn">冻结</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v1.0 点击画面切换冻结</div>
+        <div class="info">v1.1 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <!-- 隐藏的文件选择器 -->
@@ -374,7 +374,7 @@
     const smallW = Math.floor(size / blockSize);
     const smallH = Math.floor(size / blockSize);
     
-    // ===== 第一步：原来的像素化（小图放大，速度极快） =====
+    // ===== 第一步：像素化（小图放大） =====
     const smallCanvas = document.createElement('canvas');
     smallCanvas.width = smallW;
     smallCanvas.height = smallH;
@@ -413,6 +413,38 @@
             smallImageData.data[smallIdx + 3] = 255;
         }
     }
+    smallCtx.putImageData(smallImageData, 0, 0);
+    
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
+    
+    // ===== 第二步：仅在 blockSize >= 6 时叠加圆点遮罩 =====
+    if (blockSize >= 6) {
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = canvas.width;
+        maskCanvas.height = canvas.height;
+        const maskCtx = maskCanvas.getContext('2d');
+        
+        maskCtx.fillStyle = '#000';
+        maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+        
+        const radius = (blockSize / 2) * 0.85;
+        
+        for (let y = 0; y < canvas.height; y += blockSize) {
+            for (let x = 0; x < canvas.width; x += blockSize) {
+                const centerX = x + blockSize / 2;
+                const centerY = y + blockSize / 2;
+                maskCtx.globalCompositeOperation = 'destination-out';
+                maskCtx.beginPath();
+                maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                maskCtx.fill();
+            }
+        }
+        
+        ctx.drawImage(maskCanvas, 0, 0);
+    }
+    // blockSize < 6 时直接保留方形像素，不做圆点处理
+}
     smallCtx.putImageData(smallImageData, 0, 0);
     
     // 放大到最终画布
