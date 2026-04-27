@@ -368,22 +368,31 @@
         }
 
         // ========== 通用像素化处理（摄像头和上传共用） ==========
-        function pixelateData(imageData, size) {
+    function pixelateData(imageData, size) {
     const data = imageData.data;
     const blockSize = currentPixelSize;
-    // 清除画布，准备直接画圆点
-    ctx.clearRect(0, 0, size, size);
-
-    // 遍历每个方块
-    for (let y = 0; y < size; y += blockSize) {
-        for (let x = 0; x < size; x += blockSize) {
+    const smallW = Math.floor(size / blockSize);
+    const smallH = Math.floor(size / blockSize);
+    
+    // ===== 第一步：原来的像素化（小图放大，速度极快） =====
+    const smallCanvas = document.createElement('canvas');
+    smallCanvas.width = smallW;
+    smallCanvas.height = smallH;
+    const smallCtx = smallCanvas.getContext('2d');
+    smallCtx.imageSmoothingEnabled = false;
+    
+    const smallImageData = smallCtx.createImageData(smallW, smallH);
+    
+    for (let y = 0; y < smallH; y++) {
+        for (let x = 0; x < smallW; x++) {
             let sumR = 0, sumG = 0, sumB = 0, count = 0;
-            const endX = Math.min(x + blockSize, size);
-            const endY = Math.min(y + blockSize, size);
+            const startX = x * blockSize;
+            const startY = y * blockSize;
+            const endX = Math.min(startX + blockSize, size);
+            const endY = Math.min(startY + blockSize, size);
             
-            // 计算该方块的平均颜色
-            for (let sy = y; sy < endY; sy++) {
-                for (let sx = x; sx < endX; sx++) {
+            for (let sy = startY; sy < endY; sy++) {
+                for (let sx = startX; sx < endX; sx++) {
                     const idx = (sy * size + sx) * 4;
                     sumR += data[idx];
                     sumG += data[idx + 1];
@@ -391,25 +400,54 @@
                     count++;
                 }
             }
-            
             let avgR = Math.round(sumR / count);
             let avgG = Math.round(sumG / count);
             let avgB = Math.round(sumB / count);
             
-            // 应用滤镜
             const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
-            ctx.fillStyle = `rgb(${fr},${fg},${fb})`;
             
-            // 画圆点
-            const centerX = x + blockSize / 2;
-            const centerY = y + blockSize / 2;
-            const radius = (blockSize / 2) * 0.85; // 0.85 让圆点之间有点空隙，更像点阵
-            
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.fill();
+            const smallIdx = (y * smallW + x) * 4;
+            smallImageData.data[smallIdx] = fr;
+            smallImageData.data[smallIdx + 1] = fg;
+            smallImageData.data[smallIdx + 2] = fb;
+            smallImageData.data[smallIdx + 3] = 255;
         }
     }
+    smallCtx.putImageData(smallImageData, 0, 0);
+    
+    // 放大到最终画布
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
+    
+    // ===== 第二步：叠加圆形遮罩 =====
+    // 创建一个临时的遮罩画布，画上黑色背景 + 透明圆孔
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = canvas.width;
+    maskCanvas.height = canvas.height;
+    const maskCtx = maskCanvas.getContext('2d');
+    
+    // 先铺满黑色（会把方块之间的缝隙染黑，但圆孔会透出像素色）
+    maskCtx.fillStyle = '#000';
+    maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+    
+    // 在每个像素块中心画透明圆孔
+    const radius = (blockSize / 2) * 0.85; // 可调：0.85 是圆点大小
+    
+    for (let y = 0; y < canvas.height; y += blockSize) {
+        for (let x = 0; x < canvas.width; x += blockSize) {
+            const centerX = x + blockSize / 2;
+            const centerY = y + blockSize / 2;
+            
+            // 用 destination-out 模式挖孔（把黑色变成透明）
+            maskCtx.globalCompositeOperation = 'destination-out';
+            maskCtx.beginPath();
+            maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            maskCtx.fill();
+        }
+    }
+    
+    // 将遮罩盖到主画布上
+    ctx.drawImage(maskCanvas, 0, 0);
 }
 
         // ========== 摄像头像素化 ==========
