@@ -359,29 +359,32 @@
         }
 
         // ========== 滤镜函数 ==========
-        function applyFilterToBlock(r, g, b) {
-            switch (currentFilter) {
-                case 'red': {
-                    if (r >= thresholdValue_user) return [colorDepth, Math.min(255, Math.round(colorDepth * 0.07)), Math.min(255, Math.round(colorDepth * 0.07))];
-                    if (r < 15) return [0, 0, 0];
-                    const fade = r / thresholdValue_user;
-                    return [Math.round(colorDepth * fade), Math.round(colorDepth * 0.07 * fade), Math.round(colorDepth * 0.07 * fade)];
-                }
-                case 'blue': {
-                    if (b >= thresholdValue_user) return [Math.min(255, Math.round(colorDepth * 0.07)), Math.min(255, Math.round(colorDepth * 0.07)), colorDepth];
-                    if (b < 15) return [0, 0, 0];
-                    const fade = b / thresholdValue_user;
-                    return [Math.round(colorDepth * 0.07 * fade), Math.round(colorDepth * 0.07 * fade), Math.round(colorDepth * fade)];
-                }
-                case 'bw': {
-                    const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    const contrast = gray < 128 ? 0 : 255;
-                    return [contrast, contrast, contrast];
-                }
-                default:
-                    return [r, g, b];
+
+    function applyFilterToBlock(r, g, b) {
+    switch (currentFilter) {
+        case 'red': {
+            if (r >= thresholdValue_user) {
+                return [colorDepth, 15, 15];
+            } else {
+                return [0, 0, 0];
             }
         }
+        case 'blue': {
+            if (b >= thresholdValue_user) {
+                return [15, 15, colorDepth];
+            } else {
+                return [0, 0, 0];
+            }
+        }
+        case 'bw': {
+            const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            const contrast = gray < 128 ? 0 : 255;
+            return [contrast, contrast, contrast];
+        }
+        default:
+            return [r, g, b];
+    }
+}
 
         // ========== 通用像素化处理 ==========
         function pixelateData(imageData, size) {
