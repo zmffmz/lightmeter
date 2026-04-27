@@ -137,7 +137,7 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v2.7 · 点击画面切换冻结</div>
+        <div class="info">v2.71 · 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -587,34 +587,40 @@
 
         // ========== 录制（MediaRecorder） ==========
         function startRecording() {
-            if (mode !== 'camera') return;
-            recordedChunks = [];
-            
-            const videoStream = canvas.captureStream(10);
-            mediaRecorder = new MediaRecorder(videoStream, { mimeType: 'video/webm' });
-            
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) {
-                    recordedChunks.push(e.data);
-                }
-            };
-            
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'pixel_video.webm';
-                link.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                recordedChunks = [];
-            };
-            
-            mediaRecorder.start();
-            recording = true;
-            recordBtn.textContent = '停止';
-            recordBtn.classList.add('recording');
+    if (mode !== 'camera') return;
+    recordedChunks = [];
+    
+    recordingMimeType = 'video/webm';
+    if (MediaRecorder.isTypeSupported('video/mp4')) {
+        recordingMimeType = 'video/mp4';
+    }
+    
+    const videoStream = canvas.captureStream(10);
+    mediaRecorder = new MediaRecorder(videoStream, { mimeType: recordingMimeType });
+    
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+            recordedChunks.push(e.data);
         }
+    };
+    
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: recordingMimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const ext = (recordingMimeType === 'video/mp4') ? 'mp4' : 'webm';
+        link.download = `pixel_video.${ext}`;
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        recordedChunks = [];
+    };
+    
+    mediaRecorder.start();
+    recording = true;
+    recordBtn.textContent = '停止';
+    recordBtn.classList.add('recording');
+}
 
         function stopRecording() {
             if (!recording || !mediaRecorder) return;
