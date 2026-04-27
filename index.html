@@ -125,7 +125,7 @@
             <button id="freezeBtn">冻结</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v1.2 · 点击画面切换冻结</div>
+        <div class="info">v1.3 · 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <!-- 隐藏的文件选择器 -->
@@ -387,50 +387,96 @@
 }
 
         // ========== 通用像素化处理 ==========
-        function pixelateData(imageData, size) {
-            const data = imageData.data;
-            const blockSize = currentPixelSize;
-            const smallW = Math.floor(size / blockSize);
-            const smallH = Math.floor(size / blockSize);
+       function pixelateData(imageData, size) {
+    const data = imageData.data;
+    const blockSize = currentPixelSize;
+    
+    // ★ 把 size 调整为 blockSize 的整数倍
+    const adjustedSize = Math.floor(size / blockSize) * blockSize;
+    size = adjustedSize;
+    
+    // ★ 调整 Canvas 物理尺寸
+    canvas.width = size;
+    canvas.height = size;
+    
+    const smallW = Math.floor(size / blockSize);
+    const smallH = Math.floor(size / blockSize);
+    
+    const smallCanvas = document.createElement('canvas');
+    smallCanvas.width = smallW;
+    smallCanvas.height = smallH;
+    const smallCtx = smallCanvas.getContext('2d');
+    smallCtx.imageSmoothingEnabled = false;
+    
+    const smallImageData = smallCtx.createImageData(smallW, smallH);
+    
+    for (let y = 0; y < smallH; y++) {
+        for (let x = 0; x < smallW; x++) {
+            let sumR = 0, sumG = 0, sumB = 0, count = 0;
+            const startX = x * blockSize;
+            const startY = y * blockSize;
+            const endX = Math.min(startX + blockSize, size);
+            const endY = Math.min(startY + blockSize, size);
             
-            const smallCanvas = document.createElement('canvas');
-            smallCanvas.width = smallW;
-            smallCanvas.height = smallH;
-            const smallCtx = smallCanvas.getContext('2d');
-            smallCtx.imageSmoothingEnabled = false;
-            
-            const smallImageData = smallCtx.createImageData(smallW, smallH);
-            
-            for (let y = 0; y < smallH; y++) {
-                for (let x = 0; x < smallW; x++) {
-                    let sumR = 0, sumG = 0, sumB = 0, count = 0;
-                    const startX = x * blockSize;
-                    const startY = y * blockSize;
-                    const endX = Math.min(startX + blockSize, size);
-                    const endY = Math.min(startY + blockSize, size);
-                    
-                    for (let sy = startY; sy < endY; sy++) {
-                        for (let sx = startX; sx < endX; sx++) {
-                            const idx = (sy * size + sx) * 4;
-                            sumR += data[idx];
-                            sumG += data[idx + 1];
-                            sumB += data[idx + 2];
-                            count++;
-                        }
-                    }
-                    let avgR = Math.round(sumR / count);
-                    let avgG = Math.round(sumG / count);
-                    let avgB = Math.round(sumB / count);
-                    
-                    const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
-                    
-                    const smallIdx = (y * smallW + x) * 4;
-                    smallImageData.data[smallIdx] = fr;
-                    smallImageData.data[smallIdx + 1] = fg;
-                    smallImageData.data[smallIdx + 2] = fb;
-                    smallImageData.data[smallIdx + 3] = 255;
+            for (let sy = startY; sy < endY; sy++) {
+                for (let sx = startX; sx < endX; sx++) {
+                    const idx = (sy * size + sx) * 4;
+                    sumR += data[idx];
+                    sumG += data[idx + 1];
+                    sumB += data[idx + 2];
+                    count++;
                 }
             }
+            let avgR = Math.round(sumR / count);
+            let avgG = Math.round(sumG / count);
+            let avgB = Math.round(sumB / count);
+            
+            const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
+            
+            const smallIdx = (y * smallW + x) * 4;
+            smallImageData.data[smallIdx] = fr;
+            smallImageData.data[smallIdx + 1] = fg;
+            smallImageData.data[smallIdx + 2] = fb;
+            smallImageData.data[smallIdx + 3] = 255;
+        }
+    }
+    smallCtx.putImageData(smallImageData, 0, 0);
+    
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
+    
+    // ===== 圆点遮罩（仅在 blockSize >= 4 时，带缓存） =====
+    if (blockSize >= 4) {
+        if (!cachedMask || cachedMaskBlockSize !== blockSize || cachedMaskSize !== canvas.width) {
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = canvas.width;
+            maskCanvas.height = canvas.height;
+            const maskCtx = maskCanvas.getContext('2d');
+            
+            maskCtx.fillStyle = '#000';
+            maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+            
+            const radius = (blockSize / 2) * 0.85;
+            
+            for (let y = 0; y < canvas.height; y += blockSize) {
+                for (let x = 0; x < canvas.width; x += blockSize) {
+                    const centerX = x + blockSize / 2;
+                    const centerY = y + blockSize / 2;
+                    maskCtx.globalCompositeOperation = 'destination-out';
+                    maskCtx.beginPath();
+                    maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    maskCtx.fill();
+                }
+            }
+            
+            cachedMask = maskCanvas;
+            cachedMaskBlockSize = blockSize;
+            cachedMaskSize = canvas.width;
+        }
+        
+        ctx.drawImage(cachedMask, 0, 0);
+    }
+}
             smallCtx.putImageData(smallImageData, 0, 0);
             
             ctx.imageSmoothingEnabled = false;
@@ -475,7 +521,7 @@
             
             const vw = video.videoWidth || 640;
             const vh = video.videoHeight || 640;
-            const size = Math.min(vw, vh);
+            const size = Math.floor(Math.min(vw, vh) / currentPixelSize) * currentPixelSize;
             if (size === 0) return;
             
             const tempCanvas = document.createElement('canvas');
