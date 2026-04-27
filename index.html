@@ -101,8 +101,6 @@
             margin-top: 2px;
         }
     </style>
-    <!-- GIF 编码库 -->
-    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
     <div id="viewfinder">
@@ -111,31 +109,26 @@
         <div class="placeholder" id="placeholder">上传照片 或 使用摄像头</div>
     </div>
     <div class="controls">
-        <!-- 滤镜切换 -->
         <div class="filter-row">
             <button id="filterPrev" class="filter-arrow">◀</button>
             <span id="filterLabel" class="filter-label">原色</span>
             <button id="filterNext" class="filter-arrow">▶</button>
         </div>
-        <!-- 像素尺寸 -->
         <div class="slider-group">
             <label>像素</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
-        <!-- 剪影阈值 -->
         <div class="slider-group" id="thresholdRow">
             <label>阈值</label>
             <input type="range" id="thresholdSlider" min="20" max="200" value="80" step="1">
             <span class="slider-value" id="thresholdValue">80</span>
         </div>
-        <!-- 颜色深度 -->
         <div class="slider-group" id="colorDepthRow">
             <label>亮度</label>
             <input type="range" id="colorDepthSlider" min="50" max="255" value="220" step="1">
             <span class="slider-value" id="colorDepthValue">220</span>
         </div>
-        <!-- 按钮行 -->
         <div class="btn-row">
             <button id="uploadBtn">上传</button>
             <button id="cameraBtn">拍照</button>
@@ -144,7 +137,7 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v2.61 · 点击画面切换冻结</div>
+        <div class="info">v2.7 · 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -195,10 +188,10 @@
         let uploadedImage = null;
         let mode = 'camera';
 
-        // ========== GIF 录制状态 ==========
+        // ========== 录制状态（MediaRecorder） ==========
         let recording = false;
-        let gifEncoder = null;
-        let gifFrames = 0;
+        let mediaRecorder = null;
+        let recordedChunks = [];
 
         // ========== 圆点遮罩缓存 ==========
         let cachedMask = null;
@@ -465,7 +458,6 @@
                     let avgG = Math.round(sumG / count);
                     let avgB = Math.round(sumB / count);
                     
-                    // 原色模式：增强饱和度和对比度
                     if (currentFilter === 'none') {
                         const rNorm = avgR / 255, gNorm = avgG / 255, bNorm = avgB / 255;
                         const max = Math.max(rNorm, gNorm, bNorm);
@@ -502,7 +494,6 @@
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
             
-            // ===== 圆点遮罩 =====
             if (blockSize >= 4) {
                 if (!cachedMask || cachedMaskBlockSize !== blockSize || cachedMaskSize !== canvas.width) {
                     const maskCanvas = document.createElement('canvas');
@@ -571,28 +562,6 @@
                     ctx.putImageData(frozenFrame, 0, 0);
                 }
 
-                // GIF 录制（节流 + 缩小帧尺寸，防止卡死）
-                if (recording && gifEncoder && canvas.width > 0 && !frozen) {
-                    // 每 3 帧记录一次（约 20fps -> 6-7fps GIF）
-                    if (gifFrames % 3 === 0) {
-                        try {
-                            const smallFrame = document.createElement('canvas');
-                            const scale = Math.min(1, 200 / canvas.width);
-                            smallFrame.width = Math.floor(canvas.width * scale);
-                            smallFrame.height = Math.floor(canvas.height * scale);
-                            const sfCtx = smallFrame.getContext('2d');
-                            sfCtx.drawImage(canvas, 0, 0, smallFrame.width, smallFrame.height);
-                            gifEncoder.addFrame(sfCtx, { copy: true, delay: 120 });
-                        } catch(e) {
-                            console.warn('gif addFrame error', e);
-                        }
-                    }
-                    gifFrames++;
-                    if (gifFrames > 90) {
-                        stopRecording();
-                    }
-                }
-
                 animationId = requestAnimationFrame(loop);
             }
             loop();
@@ -616,41 +585,44 @@
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
-        // ========== GIF 录制 ==========
+        // ========== 录制（MediaRecorder） ==========
         function startRecording() {
             if (mode !== 'camera') return;
+            recordedChunks = [];
+            
+            const videoStream = canvas.captureStream(10);
+            mediaRecorder = new MediaRecorder(videoStream, { mimeType: 'video/webm' });
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'pixel_video.webm';
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                recordedChunks = [];
+            };
+            
+            mediaRecorder.start();
             recording = true;
-            gifFrames = 0;
             recordBtn.textContent = '停止';
             recordBtn.classList.add('recording');
-            gifEncoder = new GIF({
-                workers: 2,
-                quality: 20,
-                width: Math.min(200, canvas.width),
-                height: Math.min(200, canvas.height),
-                workerScript: 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js'
-            });
         }
 
         function stopRecording() {
-            if (!recording) return;
+            if (!recording || !mediaRecorder) return;
+            mediaRecorder.stop();
             recording = false;
             recordBtn.textContent = '录制';
             recordBtn.classList.remove('recording');
-
-            if (gifEncoder && gifFrames > 0) {
-                gifEncoder.on('finished', function(blob) {
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = 'pixel_animation.gif';
-                    link.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                });
-                gifEncoder.render();
-            }
-            gifEncoder = null;
-            gifFrames = 0;
+            mediaRecorder = null;
         }
 
         recordBtn.addEventListener('click', () => {
