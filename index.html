@@ -147,7 +147,7 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v2.82· 点击画面切换冻结</div>
+        <div class="info">v2.83· 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -500,7 +500,7 @@ function applyVHSStyle() {
     // 仅保留亮度 > 200 的像素，其余变透明
     for (let i = 0; i < bd.length; i += 4) {
         const gray = bd[i] * 0.299 + bd[i+1] * 0.587 + bd[i+2] * 0.114;
-        if (gray < 200) {
+        if (gray < 220) {
             bd[i+3] = 0; // 设置 alpha 为 0
         }
     }
@@ -508,8 +508,8 @@ function applyVHSStyle() {
 
     // 模糊高光：通过缩小再放大实现快速模糊
     const blurCanvas = document.createElement('canvas');
-    blurCanvas.width = w / 4;
-    blurCanvas.height = h / 4;
+    blurCanvas.width = w / 8;
+    blurCanvas.height = h / 8;
     const blurCtx = blurCanvas.getContext('2d');
     blurCtx.drawImage(bloomCanvas, 0, 0, w / 4, h / 4);
     // 再放大回原尺寸
