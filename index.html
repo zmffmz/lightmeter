@@ -518,12 +518,12 @@ function applyVHSStyle() {
 
     // 6. OSD：时间戳和REC
     ctx.fillStyle = 'white';
-    ctx.font = 'bold 14px monospace';
+    ctx.font = 'bold 18px monospace';
     ctx.shadowColor = 'black';
     ctx.shadowBlur = 2;
     const margin = 8;
     ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
-    ctx.font = 'bold 12px monospace';
+    ctx.font = 'bold 16px monospace';
     if (recBlink) {
         ctx.fillStyle = 'red';
         ctx.beginPath();
