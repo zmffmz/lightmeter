@@ -88,6 +88,7 @@
         button:active { background: #3a3a3a; }
         button.primary { background: #d4af37; color: #000; border-color: #d4af37; }
         button.recording { background: #c0392b; color: #fff; border-color: #c0392b; animation: pulse 1s infinite; }
+        button.dv-active { background: #8e44ad; color: #fff; border-color: #8e44ad; }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
@@ -109,35 +110,41 @@
         <div class="placeholder" id="placeholder">上传照片 或 使用摄像头</div>
     </div>
     <div class="controls">
+        <!-- 滤镜切换 -->
         <div class="filter-row">
             <button id="filterPrev" class="filter-arrow">◀</button>
             <span id="filterLabel" class="filter-label">原色</span>
             <button id="filterNext" class="filter-arrow">▶</button>
         </div>
+        <!-- 像素尺寸 -->
         <div class="slider-group">
             <label>像素</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
+        <!-- 剪影阈值 -->
         <div class="slider-group" id="thresholdRow">
             <label>阈值</label>
             <input type="range" id="thresholdSlider" min="20" max="200" value="80" step="1">
             <span class="slider-value" id="thresholdValue">80</span>
         </div>
+        <!-- 颜色深度 -->
         <div class="slider-group" id="colorDepthRow">
             <label>亮度</label>
             <input type="range" id="colorDepthSlider" min="50" max="255" value="220" step="1">
             <span class="slider-value" id="colorDepthValue">220</span>
         </div>
+        <!-- 按钮行 -->
         <div class="btn-row">
             <button id="uploadBtn">上传</button>
             <button id="cameraBtn">拍照</button>
             <button id="switchCameraBtn">切换</button>
             <button id="freezeBtn">冻结</button>
+            <button id="dvBtn">DV</button>
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">b2.8 · 点击画面切换冻结</div>
+        <div class="info">v2.81· 点击画面切换冻结</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -159,6 +166,7 @@
         const freezeBtn = document.getElementById('freezeBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const recordBtn = document.getElementById('recordBtn');
+        const dvBtn = document.getElementById('dvBtn');
         const switchCameraBtn = document.getElementById('switchCameraBtn');
         const uploadBtn = document.getElementById('uploadBtn');
         const cameraBtn = document.getElementById('cameraBtn');
@@ -192,6 +200,14 @@
         let recording = false;
         let mediaRecorder = null;
         let recordedChunks = [];
+        let recordingMimeType = 'video/webm';
+
+        // ========== DV风格 ==========
+        let dvStyleEnabled = false;
+        dvBtn.addEventListener('click', () => {
+            dvStyleEnabled = !dvStyleEnabled;
+            dvBtn.classList.toggle('dv-active', dvStyleEnabled);
+        });
 
         // ========== 圆点遮罩缓存 ==========
         let cachedMask = null;
@@ -392,18 +408,12 @@
         function applyFilterToBlock(r, g, b) {
             switch (currentFilter) {
                 case 'red': {
-                    if (r >= thresholdValue_user) {
-                        return [colorDepth, 15, 15];
-                    } else {
-                        return [0, 0, 0];
-                    }
+                    if (r >= thresholdValue_user) return [colorDepth, 15, 15];
+                    else return [0, 0, 0];
                 }
                 case 'blue': {
-                    if (b >= thresholdValue_user) {
-                        return [15, 15, colorDepth];
-                    } else {
-                        return [0, 0, 0];
-                    }
+                    if (b >= thresholdValue_user) return [15, 15, colorDepth];
+                    else return [0, 0, 0];
                 }
                 case 'bw': {
                     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -413,6 +423,74 @@
                 default:
                     return [r, g, b];
             }
+        }
+
+        // ========== DV复古特效 ==========
+        function applyVHSStyle() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('zh-CN');
+            const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
+
+            // 扫描线 + 噪点
+            for (let y = 0; y < h; y++) {
+                if (y % 2 === 0) {
+                    for (let x = 0; x < w; x++) {
+                        const idx = (y * w + x) * 4;
+                        data[idx] = Math.max(0, data[idx] * 0.85);
+                        data[idx + 1] = Math.max(0, data[idx + 1] * 0.85);
+                        data[idx + 2] = Math.max(0, data[idx + 2] * 0.85);
+                    }
+                }
+                if (Math.random() < 0.03) {
+                    const randX = Math.floor(Math.random() * w);
+                    const idx = (y * w + randX) * 4;
+                    const noise = Math.random() * 60 - 30;
+                    data[idx] = Math.min(255, Math.max(0, data[idx] + noise));
+                    data[idx + 1] = Math.min(255, Math.max(0, data[idx + 1] + noise));
+                    data[idx + 2] = Math.min(255, Math.max(0, data[idx + 2] + noise));
+                }
+            }
+
+            // 色差偏移
+            const tempData = new Uint8ClampedArray(data);
+            const offset = 2;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    const redSrcIdx = (y * w + Math.max(0, x - offset)) * 4;
+                    data[idx] = tempData[redSrcIdx];
+                    const blueSrcIdx = (y * w + Math.min(w - 1, x + offset)) * 4;
+                    data[idx + 2] = tempData[blueSrcIdx + 2];
+                    data[idx + 1] = tempData[idx + 1];
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // OSD：时间戳和REC
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px monospace';
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 2;
+            const margin = 8;
+            ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
+            ctx.font = 'bold 12px monospace';
+            if (recBlink) {
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(w - 20, margin + 6, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.fillStyle = 'white';
+            ctx.fillText('REC', w - 40, margin + 10);
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
         }
 
         // ========== 通用像素化处理 ==========
@@ -468,12 +546,10 @@
                             s = l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
                         }
                         s = Math.min(1, s * 1.8);
-                        
                         const contrastFactor = 1.50;
                         avgR = Math.min(255, Math.max(0, ((rNorm - 0.5) * contrastFactor + 0.5) * 255));
                         avgG = Math.min(255, Math.max(0, ((gNorm - 0.5) * contrastFactor + 0.5) * 255));
                         avgB = Math.min(255, Math.max(0, ((bNorm - 0.5) * contrastFactor + 0.5) * 255));
-                        
                         const gray = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
                         avgR = Math.min(255, Math.max(0, gray + (avgR - gray) * 1.4));
                         avgG = Math.min(255, Math.max(0, gray + (avgG - gray) * 1.4));
@@ -494,6 +570,7 @@
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
             
+            // 圆点遮罩（必须在DV之前）
             if (blockSize >= 4) {
                 if (!cachedMask || cachedMaskBlockSize !== blockSize || cachedMaskSize !== canvas.width) {
                     const maskCanvas = document.createElement('canvas');
@@ -505,7 +582,6 @@
                     maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
                     
                     const radius = (blockSize / 2) * 0.85;
-                    
                     for (let y = 0; y < canvas.height; y += blockSize) {
                         for (let x = 0; x < canvas.width; x += blockSize) {
                             const centerX = x + blockSize / 2;
@@ -516,13 +592,16 @@
                             maskCtx.fill();
                         }
                     }
-                    
                     cachedMask = maskCanvas;
                     cachedMaskBlockSize = blockSize;
                     cachedMaskSize = canvas.width;
                 }
-                
                 ctx.drawImage(cachedMask, 0, 0);
+            }
+
+            // DV风格：在最终画布上叠加特效
+            if (dvStyleEnabled) {
+                applyVHSStyle();
             }
         }
 
@@ -561,7 +640,6 @@
                 } else if (frozenFrame) {
                     ctx.putImageData(frozenFrame, 0, 0);
                 }
-
                 animationId = requestAnimationFrame(loop);
             }
             loop();
@@ -587,40 +665,38 @@
 
         // ========== 录制（MediaRecorder） ==========
         function startRecording() {
-    if (mode !== 'camera') return;
-    recordedChunks = [];
-    
-    recordingMimeType = 'video/webm';
-    if (MediaRecorder.isTypeSupported('video/mp4')) {
-        recordingMimeType = 'video/mp4';
-    }
-    
-    const videoStream = canvas.captureStream(10);
-    mediaRecorder = new MediaRecorder(videoStream, { mimeType: recordingMimeType });
-    
-    mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-            recordedChunks.push(e.data);
+            if (mode !== 'camera') return;
+            recordedChunks = [];
+            
+            recordingMimeType = 'video/webm';
+            if (MediaRecorder.isTypeSupported('video/mp4')) {
+                recordingMimeType = 'video/mp4';
+            }
+            
+            const videoStream = canvas.captureStream(10);
+            mediaRecorder = new MediaRecorder(videoStream, { mimeType: recordingMimeType });
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: recordingMimeType });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const ext = (recordingMimeType === 'video/mp4') ? 'mp4' : 'webm';
+                link.download = 'pixel_video.' + ext;
+                link.href = url;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                recordedChunks = [];
+            };
+            
+            mediaRecorder.start();
+            recording = true;
+            recordBtn.textContent = '停止';
+            recordBtn.classList.add('recording');
         }
-    };
-    
-    mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: recordingMimeType });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const ext = (recordingMimeType === 'video/mp4') ? 'mp4' : 'webm';
-        link.download = `pixel_video.${ext}`;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        recordedChunks = [];
-    };
-    
-    mediaRecorder.start();
-    recording = true;
-    recordBtn.textContent = '停止';
-    recordBtn.classList.add('recording');
-}
 
         function stopRecording() {
             if (!recording || !mediaRecorder) return;
@@ -632,35 +708,28 @@
         }
 
         recordBtn.addEventListener('click', () => {
-            if (!recording) {
-                startRecording();
-            } else {
-                stopRecording();
-            }
+            if (!recording) startRecording();
+            else stopRecording();
         });
 
-        // ========== 保存下载 ==========
+        // ========== 保存下载（修复卡死和弹窗拦截） ==========
         downloadBtn.addEventListener('click', () => {
-    if (canvas.width === 0) return;
-    
-    // 使用 toBlob 避免主线程卡死，且不受弹窗拦截
-    canvas.toBlob((blob) => {
-        if (!blob) {
-            alert('图片生成失败，请重试');
-            return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'pixel_photo.png';
-        // 将 link 添加到 body，确保点击不被拦截
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        // 释放内存
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }, 'image/png');
-});
+            if (canvas.width === 0) return;
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    alert('图片生成失败，请重试');
+                    return;
+                }
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'pixel_photo.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }, 'image/png');
+        });
 
         // ========== 像素尺寸滑块 ==========
         pixelSlider.addEventListener('input', () => {
@@ -669,9 +738,7 @@
             cachedMask = null;
             cachedMaskBlockSize = 0;
             cachedMaskSize = 0;
-            if (mode === 'upload' && uploadedImage) {
-                processImage();
-            }
+            if (mode === 'upload' && uploadedImage) processImage();
         });
 
         // ========== 清理 ==========
