@@ -113,31 +113,26 @@
         <div class="placeholder" id="placeholder">上传照片 或 使用摄像头</div>
     </div>
     <div class="controls">
-        <!-- 滤镜切换 -->
         <div class="filter-row">
             <button id="filterPrev" class="filter-arrow">◀</button>
             <span id="filterLabel" class="filter-label">原色</span>
             <button id="filterNext" class="filter-arrow">▶</button>
         </div>
-        <!-- 像素尺寸 -->
         <div class="slider-group">
             <label>像素</label>
             <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
             <span class="slider-value" id="pixelValue">8</span>
         </div>
-        <!-- 剪影阈值 -->
         <div class="slider-group" id="thresholdRow">
             <label>阈值</label>
             <input type="range" id="thresholdSlider" min="20" max="200" value="80" step="1">
             <span class="slider-value" id="thresholdValue">80</span>
         </div>
-        <!-- 颜色深度 -->
         <div class="slider-group" id="colorDepthRow">
             <label>亮度</label>
             <input type="range" id="colorDepthSlider" min="50" max="255" value="220" step="1">
             <span class="slider-value" id="colorDepthValue">220</span>
         </div>
-        <!-- 按钮行 -->
         <div class="btn-row">
             <button id="uploadBtn">上传</button>
             <button id="cameraBtn">拍照</button>
@@ -147,13 +142,12 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v2.87· 点击画面切换冻结</div>
+        <div class="info">v3.0 · 点击画面切换冻结 · 音频低质</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
 
     <script>
-        // ========== DOM 元素 ==========
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -179,12 +173,10 @@
         const filterNext = document.getElementById('filterNext');
         const filterLabel = document.getElementById('filterLabel');
 
-        // ========== 滤镜列表 ==========
         const filterList = ['none', 'red', 'blue', 'bw'];
         const filterNames = { none: '原色', red: '红黑', blue: '蓝黑', bw: '黑白' };
         let currentFilterIndex = 0;
 
-        // ========== 状态变量 ==========
         let stream = null;
         let animationId = null;
         let frozen = false;
@@ -199,25 +191,22 @@
         let uploadedImage = null;
         let mode = 'camera';
 
-        // ========== 录制状态（MediaRecorder） ==========
         let recording = false;
         let mediaRecorder = null;
         let recordedChunks = [];
         let recordingMimeType = 'video/webm';
+        let audioStream = null;
 
-        // ========== DV风格 ==========
         let dvStyleEnabled = false;
         dvBtn.addEventListener('click', () => {
             dvStyleEnabled = !dvStyleEnabled;
             dvBtn.classList.toggle('dv-active', dvStyleEnabled);
         });
 
-        // ========== 圆点遮罩缓存 ==========
         let cachedMask = null;
         let cachedMaskBlockSize = 0;
         let cachedMaskSize = 0;
 
-        // ========== 滑块事件 ==========
         thresholdSlider.addEventListener('input', () => {
             thresholdValue_user = parseInt(thresholdSlider.value);
             thresholdValue.textContent = thresholdValue_user;
@@ -227,7 +216,6 @@
             colorDepthValue.textContent = colorDepth;
         });
 
-        // ========== 滤镜切换 ==========
         function updateFilterUI() {
             filterLabel.textContent = filterNames[currentFilter];
             if (currentFilter === 'red' || currentFilter === 'blue') {
@@ -245,7 +233,6 @@
             updateFilterUI();
             if (mode === 'upload' && uploadedImage) processImage();
         });
-
         filterNext.addEventListener('click', () => {
             currentFilterIndex = (currentFilterIndex + 1) % filterList.length;
             currentFilter = filterList[currentFilterIndex];
@@ -253,7 +240,6 @@
             if (mode === 'upload' && uploadedImage) processImage();
         });
 
-        // ========== 摄像头清理 ==========
         function stopCamera() {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
@@ -266,7 +252,6 @@
             videoReady = false;
         }
 
-        // ========== 切换到摄像头模式 ==========
         async function switchToCamera() {
             if (recording) stopRecording();
             stopCamera();
@@ -280,7 +265,6 @@
             await initCamera();
         }
 
-        // ========== 切换到上传模式 ==========
         function switchToUpload(img) {
             if (recording) stopRecording();
             stopCamera();
@@ -295,18 +279,15 @@
             processImage();
         }
 
-        // ========== 启动摄像头 ==========
         async function initCamera() {
             stopCamera();
             initAttempted = false;
             frozen = false;
             frozenFrame = null;
             freezeBtn.textContent = '冻结';
-            
             if (initAttempted) return;
             initAttempted = true;
             warningEl.textContent = '正在请求摄像头...';
-            
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: currentFacingMode, width: 640, height: 640 },
@@ -314,7 +295,6 @@
                 });
                 video.srcObject = stream;
                 await video.play();
-                
                 video.addEventListener('loadedmetadata', () => {
                     videoReady = true;
                     setupCanvasAndStart();
@@ -323,7 +303,6 @@
                     placeholder.style.display = 'none';
                     canvas.style.display = 'block';
                 });
-                
                 setTimeout(() => {
                     if (!videoReady && video.videoWidth > 0) {
                         videoReady = true;
@@ -335,7 +314,6 @@
                         warningEl.textContent = '摄像头未能获取画面';
                     }
                 }, 2000);
-                
             } catch (err) {
                 warningEl.textContent = '摄像头权限被拒绝';
                 placeholder.textContent = '请使用上传照片功能';
@@ -343,14 +321,12 @@
             }
         }
 
-        // ========== 切换摄像头 ==========
         switchCameraBtn.addEventListener('click', () => {
             if (mode === 'upload') return;
             currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
             initCamera();
         });
 
-        // ========== 上传照片按钮 ==========
         uploadBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -364,7 +340,6 @@
             reader.readAsDataURL(file);
         });
 
-        // ========== 相机按钮 ==========
         cameraBtn.addEventListener('click', switchToCamera);
 
         function setupCanvasAndStart() {
@@ -378,185 +353,153 @@
             startPixelLoop();
         }
 
-        // ========== 处理上传的图片 ==========
         function processImage() {
             if (!uploadedImage) return;
-            
             const imgW = uploadedImage.width;
             const imgH = uploadedImage.height;
             const rawSize = Math.min(imgW, imgH);
             const size = Math.floor(rawSize / currentPixelSize) * currentPixelSize;
-            
             canvas.width = size;
             canvas.height = size;
-            
             cachedMask = null;
             cachedMaskBlockSize = 0;
             cachedMaskSize = 0;
-            
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = size;
             tempCanvas.height = size;
-            
             const sx = (imgW - size) / 2;
             const sy = (imgH - size) / 2;
             tempCtx.drawImage(uploadedImage, sx, sy, size, size, 0, 0, size, size);
-            
             const imageData = tempCtx.getImageData(0, 0, size, size);
             pixelateData(imageData, size);
         }
 
-        // ========== 滤镜函数 ==========
         function applyFilterToBlock(r, g, b) {
             switch (currentFilter) {
-                case 'red': {
-                    if (r >= thresholdValue_user) return [colorDepth, 15, 15];
-                    else return [0, 0, 0];
-                }
-                case 'blue': {
-                    if (b >= thresholdValue_user) return [15, 15, colorDepth];
-                    else return [0, 0, 0];
-                }
+                case 'red': return (r >= thresholdValue_user) ? [colorDepth, 15, 15] : [0, 0, 0];
+                case 'blue': return (b >= thresholdValue_user) ? [15, 15, colorDepth] : [0, 0, 0];
                 case 'bw': {
                     const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
                     const contrast = gray < 128 ? 0 : 255;
                     return [contrast, contrast, contrast];
                 }
-                default:
-                    return [r, g, b];
+                default: return [r, g, b];
             }
         }
 
-        // ========== DV复古特效 ==========
-function applyVHSStyle() {
-    const w = canvas.width;
-    const h = canvas.height;
-    const imageData = ctx.getImageData(0, 0, w, h);
-    const data = imageData.data;
+        function applyVHSStyle() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('zh-CN');
+            const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
 
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('zh-CN');
-    const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
-
-    // 1. 扫描线：隔行变暗
-    for (let y = 0; y < h; y++) {
-        if (y % 2 === 0) {
-            for (let x = 0; x < w; x++) {
-                const idx = (y * w + x) * 4;
-                data[idx] = Math.max(0, data[idx] * 0.85);
-                data[idx + 1] = Math.max(0, data[idx + 1] * 0.85);
-                data[idx + 2] = Math.max(0, data[idx + 2] * 0.85);
+            for (let y = 0; y < h; y++) {
+                if (y % 2 === 0) {
+                    for (let x = 0; x < w; x++) {
+                        const idx = (y * w + x) * 4;
+                        data[idx] = Math.max(0, data[idx] * 0.85);
+                        data[idx + 1] = Math.max(0, data[idx + 1] * 0.85);
+                        data[idx + 2] = Math.max(0, data[idx + 2] * 0.85);
+                    }
+                }
             }
+
+            const tempData = new Uint8ClampedArray(data);
+            const offset = Math.max(3, currentPixelSize);
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    const redSrcIdx = (y * w + Math.max(0, x - offset)) * 4;
+                    data[idx] = tempData[redSrcIdx];
+                    const blueSrcIdx = (y * w + Math.min(w - 1, x + offset)) * 4;
+                    data[idx + 2] = tempData[blueSrcIdx + 2];
+                    data[idx + 1] = tempData[idx + 1];
+                }
+            }
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i] * 0.7;
+                let g = data[i + 1] * 0.7;
+                let b = data[i + 2] * 0.7;
+                const contrastFactor = 0.75;
+                r = 128 + (r - 128) * contrastFactor;
+                g = 128 + (g - 128) * contrastFactor;
+                b = 128 + (b - 128) * contrastFactor;
+                data[i] = Math.min(255, Math.max(0, r));
+                data[i + 1] = Math.min(255, Math.max(0, g));
+                data[i + 2] = Math.min(255, Math.max(0, b));
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            const bloomCanvas = document.createElement('canvas');
+            bloomCanvas.width = w;
+            bloomCanvas.height = h;
+            const bloomCtx = bloomCanvas.getContext('2d');
+            bloomCtx.drawImage(canvas, 0, 0);
+            const bloomData = bloomCtx.getImageData(0, 0, w, h);
+            const bd = bloomData.data;
+            for (let i = 0; i < bd.length; i += 4) {
+                const gray = bd[i] * 0.299 + bd[i + 1] * 0.587 + bd[i + 2] * 0.114;
+                if (gray < 220) bd[i + 3] = 0;
+            }
+            bloomCtx.putImageData(bloomData, 0, 0);
+            const blurCanvas = document.createElement('canvas');
+            blurCanvas.width = w / 8;
+            blurCanvas.height = h / 8;
+            const blurCtx = blurCanvas.getContext('2d');
+            blurCtx.drawImage(bloomCanvas, 0, 0, w / 8, h / 8);
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(blurCanvas, 0, 0, w, h);
+            ctx.globalAlpha = 1.0;
+
+            const softCanvas = document.createElement('canvas');
+            softCanvas.width = w * 0.8;
+            softCanvas.height = h * 0.8;
+            const softCtx = softCanvas.getContext('2d');
+            softCtx.drawImage(canvas, 0, 0, w * 0.8, h * 0.8);
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(softCanvas, 0, 0, w, h);
+
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 18px monospace';
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 2;
+            const margin = 8;
+            ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
+            ctx.font = 'bold 16px monospace';
+            if (recBlink) {
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(w - 20, margin + 6, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.fillStyle = 'white';
+            ctx.fillText('REC', w - 40, margin + 10);
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
         }
-    }
 
-        // 2. 色差偏移：红色左移、蓝色右移（动态偏移量）
-    const tempData = new Uint8ClampedArray(data);
-    const offset = Math.max(3, currentPixelSize);   // 至少 3px，大像素时更明显
-    for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-            const idx = (y * w + x) * 4;
-            const redSrcIdx = (y * w + Math.max(0, x - offset)) * 4;
-            data[idx] = tempData[redSrcIdx];
-            const blueSrcIdx = (y * w + Math.min(w - 1, x + offset)) * 4;
-            data[idx + 2] = tempData[blueSrcIdx + 2];
-            data[idx + 1] = tempData[idx + 1];
-        }
-    }
-
-    // 3. 降低亮度和对比度（模拟曝光不足、发灰）
-    for (let i = 0; i < data.length; i += 4) {
-        // 降低亮度：每个通道乘以 0.8
-        let r = data[i] * 0.75;
-        let g = data[i+1] * 0.75;
-        let b = data[i+2] * 0.75;
-        // 降低对比度：颜色向 128 靠近（减少与中灰的差距）
-        const contrastFactor = 0.75; // 越小对比度越低
-        r = 128 + (r - 128) * contrastFactor;
-        g = 128 + (g - 128) * contrastFactor;
-        b = 128 + (b - 128) * contrastFactor;
-        // 写回，确保在 0-255 范围
-        data[i] = Math.min(255, Math.max(0, r));
-        data[i+1] = Math.min(255, Math.max(0, g));
-        data[i+2] = Math.min(255, Math.max(0, b));
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-
-    // 4. 高光溢出（减轻版，阈值 220 + 透明度 0.5）
-    const bloomCanvas = document.createElement('canvas');
-    bloomCanvas.width = w;
-    bloomCanvas.height = h;
-    const bloomCtx = bloomCanvas.getContext('2d');
-    bloomCtx.drawImage(canvas, 0, 0);
-    const bloomData = bloomCtx.getImageData(0, 0, w, h);
-    const bd = bloomData.data;
-    for (let i = 0; i < bd.length; i += 4) {
-        const gray = bd[i] * 0.299 + bd[i+1] * 0.587 + bd[i+2] * 0.114;
-        if (gray < 220) bd[i+3] = 0;
-    }
-    bloomCtx.putImageData(bloomData, 0, 0);
-    const blurCanvas = document.createElement('canvas');
-    blurCanvas.width = w / 8;
-    blurCanvas.height = h / 8;
-    const blurCtx = blurCanvas.getContext('2d');
-    blurCtx.drawImage(bloomCanvas, 0, 0, w / 8, h / 8);
-    ctx.globalAlpha = 0.5;
-    ctx.drawImage(blurCanvas, 0, 0, w, h);
-    ctx.globalAlpha = 1.0;
-
-    // 5. 低像素柔焦
-    const softCanvas = document.createElement('canvas');
-    softCanvas.width = w * 0.8;
-    softCanvas.height = h * 0.8;
-    const softCtx = softCanvas.getContext('2d');
-    softCtx.drawImage(canvas, 0, 0, w * 0.8, h * 0.8);
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(softCanvas, 0, 0, w, h);
-
-    // 6. OSD：时间戳和REC
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 18px monospace';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 2;
-    const margin = 8;
-    ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
-    ctx.font = 'bold 16px monospace';
-    if (recBlink) {
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(w - 20, margin + 6, 4, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    ctx.fillStyle = 'white';
-    ctx.fillText('REC', w - 40, margin + 10);
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
-}
-        // ========== 通用像素化处理 ==========
         function pixelateData(imageData, size) {
             const data = imageData.data;
             const blockSize = currentPixelSize;
-            
             const adjustedSize = Math.floor(size / blockSize) * blockSize;
             size = adjustedSize;
-            
             canvas.width = size;
             canvas.height = size;
-            
             const smallW = Math.floor(size / blockSize);
             const smallH = Math.floor(size / blockSize);
-            
             const smallCanvas = document.createElement('canvas');
             smallCanvas.width = smallW;
             smallCanvas.height = smallH;
             const smallCtx = smallCanvas.getContext('2d');
             smallCtx.imageSmoothingEnabled = false;
-            
             const smallImageData = smallCtx.createImageData(smallW, smallH);
-            
             for (let y = 0; y < smallH; y++) {
                 for (let x = 0; x < smallW; x++) {
                     let sumR = 0, sumG = 0, sumB = 0, count = 0;
@@ -564,7 +507,6 @@ function applyVHSStyle() {
                     const startY = y * blockSize;
                     const endX = Math.min(startX + blockSize, size);
                     const endY = Math.min(startY + blockSize, size);
-                    
                     for (let sy = startY; sy < endY; sy++) {
                         for (let sx = startX; sx < endX; sx++) {
                             const idx = (sy * size + sx) * 4;
@@ -577,7 +519,6 @@ function applyVHSStyle() {
                     let avgR = Math.round(sumR / count);
                     let avgG = Math.round(sumG / count);
                     let avgB = Math.round(sumB / count);
-                    
                     if (currentFilter === 'none') {
                         const rNorm = avgR / 255, gNorm = avgG / 255, bNorm = avgB / 255;
                         const max = Math.max(rNorm, gNorm, bNorm);
@@ -597,9 +538,7 @@ function applyVHSStyle() {
                         avgG = Math.min(255, Math.max(0, gray + (avgG - gray) * 1.4));
                         avgB = Math.min(255, Math.max(0, gray + (avgB - gray) * 1.4));
                     }
-                    
                     const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
-                    
                     const smallIdx = (y * smallW + x) * 4;
                     smallImageData.data[smallIdx] = fr;
                     smallImageData.data[smallIdx + 1] = fg;
@@ -608,21 +547,16 @@ function applyVHSStyle() {
                 }
             }
             smallCtx.putImageData(smallImageData, 0, 0);
-            
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
-            
-            // 圆点遮罩（必须在DV之前）
             if (blockSize >= 4) {
                 if (!cachedMask || cachedMaskBlockSize !== blockSize || cachedMaskSize !== canvas.width) {
                     const maskCanvas = document.createElement('canvas');
                     maskCanvas.width = canvas.width;
                     maskCanvas.height = canvas.height;
                     const maskCtx = maskCanvas.getContext('2d');
-                    
                     maskCtx.fillStyle = '#000';
                     maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-                    
                     const radius = (blockSize / 2) * 0.85;
                     for (let y = 0; y < canvas.height; y += blockSize) {
                         for (let x = 0; x < canvas.width; x += blockSize) {
@@ -640,37 +574,29 @@ function applyVHSStyle() {
                 }
                 ctx.drawImage(cachedMask, 0, 0);
             }
-
-            // DV风格：在最终画布上叠加特效
             if (dvStyleEnabled) {
                 applyVHSStyle();
             }
         }
 
-        // ========== 摄像头像素化 ==========
         function pixelateFrame() {
             if (!stream || !videoReady || video.readyState < 2) return;
-            
             const vw = video.videoWidth || 640;
             const vh = video.videoHeight || 640;
             const rawSize = Math.min(vw, vh);
             const size = Math.floor(rawSize / currentPixelSize) * currentPixelSize;
             if (size === 0) return;
-            
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = size;
             tempCanvas.height = size;
-            
             const sx = (vw - size) / 2;
             const sy = (vh - size) / 2;
             tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-            
             const imageData = tempCtx.getImageData(0, 0, size, size);
             pixelateData(imageData, size);
         }
 
-        // ========== 动画循环 ==========
         function startPixelLoop() {
             function loop() {
                 if (mode !== 'camera') {
@@ -687,7 +613,6 @@ function applyVHSStyle() {
             loop();
         }
 
-        // ========== 冻结/解冻 ==========
         function toggleFreeze() {
             if (frozen) {
                 frozen = false;
@@ -705,23 +630,35 @@ function applyVHSStyle() {
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
-        // ========== 录制（MediaRecorder） ==========
-        function startRecording() {
+        async function startRecording() {
             if (mode !== 'camera') return;
             recordedChunks = [];
-            
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch(e) {
+                console.warn('麦克风不可用，仅录制视频');
+                audioStream = null;
+            }
+            const videoStream = canvas.captureStream(10);
+            let combinedStream;
+            if (audioStream) {
+                const audioTracks = audioStream.getAudioTracks();
+                const videoTracks = videoStream.getVideoTracks();
+                combinedStream = new MediaStream([...videoTracks, ...audioTracks]);
+            } else {
+                combinedStream = videoStream;
+            }
             recordingMimeType = 'video/webm';
             if (MediaRecorder.isTypeSupported('video/mp4')) {
                 recordingMimeType = 'video/mp4';
             }
-            
-            const videoStream = canvas.captureStream(10);
-            mediaRecorder = new MediaRecorder(videoStream, { mimeType: recordingMimeType });
-            
+            mediaRecorder = new MediaRecorder(combinedStream, {
+                mimeType: recordingMimeType,
+                audioBitsPerSecond: 8000
+            });
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data && e.data.size > 0) recordedChunks.push(e.data);
             };
-            
             mediaRecorder.onstop = () => {
                 const blob = new Blob(recordedChunks, { type: recordingMimeType });
                 const url = URL.createObjectURL(blob);
@@ -732,8 +669,11 @@ function applyVHSStyle() {
                 link.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 recordedChunks = [];
+                if (audioStream) {
+                    audioStream.getTracks().forEach(track => track.stop());
+                    audioStream = null;
+                }
             };
-            
             mediaRecorder.start();
             recording = true;
             recordBtn.textContent = '停止';
@@ -754,7 +694,6 @@ function applyVHSStyle() {
             else stopRecording();
         });
 
-        // ========== 保存下载（修复卡死和弹窗拦截） ==========
         downloadBtn.addEventListener('click', () => {
             if (canvas.width === 0) return;
             canvas.toBlob((blob) => {
@@ -773,7 +712,6 @@ function applyVHSStyle() {
             }, 'image/png');
         });
 
-        // ========== 像素尺寸滑块 ==========
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
@@ -783,12 +721,10 @@ function applyVHSStyle() {
             if (mode === 'upload' && uploadedImage) processImage();
         });
 
-        // ========== 清理 ==========
         window.addEventListener('beforeunload', () => {
             stopCamera();
         });
 
-        // 初始启动
         updateFilterUI();
         initCamera();
     </script>
