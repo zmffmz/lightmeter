@@ -142,7 +142,7 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v3.0 · 点击画面切换冻结 · 音频低质</div>
+        <div class="info">v3.1</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -388,84 +388,51 @@
             }
         }
 
+        // ★ 性能优化版 DV 风格：极少的像素操作，大量使用画布合成
         function applyVHSStyle() {
             const w = canvas.width;
             const h = canvas.height;
-            const imageData = ctx.getImageData(0, 0, w, h);
-            const data = imageData.data;
             const now = new Date();
             const dateStr = now.toLocaleDateString('zh-CN');
             const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
 
-            for (let y = 0; y < h; y++) {
-                if (y % 2 === 0) {
-                    for (let x = 0; x < w; x++) {
-                        const idx = (y * w + x) * 4;
-                        data[idx] = Math.max(0, data[idx] * 0.85);
-                        data[idx + 1] = Math.max(0, data[idx + 1] * 0.85);
-                        data[idx + 2] = Math.max(0, data[idx + 2] * 0.85);
-                    }
-                }
+            // 1. 扫描线：快速绘制半透明横线
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            for (let y = 0; y < h; y += 2) {
+                ctx.fillRect(0, y, w, 1);
             }
 
-            const tempData = new Uint8ClampedArray(data);
-            const offset = Math.max(3, currentPixelSize);
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    const idx = (y * w + x) * 4;
-                    const redSrcIdx = (y * w + Math.max(0, x - offset)) * 4;
-                    data[idx] = tempData[redSrcIdx];
-                    const blueSrcIdx = (y * w + Math.min(w - 1, x + offset)) * 4;
-                    data[idx + 2] = tempData[blueSrcIdx + 2];
-                    data[idx + 1] = tempData[idx + 1];
-                }
-            }
-
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i] * 0.7;
-                let g = data[i + 1] * 0.7;
-                let b = data[i + 2] * 0.7;
-                const contrastFactor = 0.75;
-                r = 128 + (r - 128) * contrastFactor;
-                g = 128 + (g - 128) * contrastFactor;
-                b = 128 + (b - 128) * contrastFactor;
-                data[i] = Math.min(255, Math.max(0, r));
-                data[i + 1] = Math.min(255, Math.max(0, g));
-                data[i + 2] = Math.min(255, Math.max(0, b));
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-
-            const bloomCanvas = document.createElement('canvas');
-            bloomCanvas.width = w;
-            bloomCanvas.height = h;
-            const bloomCtx = bloomCanvas.getContext('2d');
-            bloomCtx.drawImage(canvas, 0, 0);
-            const bloomData = bloomCtx.getImageData(0, 0, w, h);
-            const bd = bloomData.data;
-            for (let i = 0; i < bd.length; i += 4) {
-                const gray = bd[i] * 0.299 + bd[i + 1] * 0.587 + bd[i + 2] * 0.114;
-                if (gray < 220) bd[i + 3] = 0;
-            }
-            bloomCtx.putImageData(bloomData, 0, 0);
-            const blurCanvas = document.createElement('canvas');
-            blurCanvas.width = w / 8;
-            blurCanvas.height = h / 8;
-            const blurCtx = blurCanvas.getContext('2d');
-            blurCtx.drawImage(bloomCanvas, 0, 0, w / 8, h / 8);
-            ctx.globalAlpha = 0.5;
-            ctx.drawImage(blurCanvas, 0, 0, w, h);
+            // 2. 轻微色差：左右位移叠加
+            const offset = Math.max(2, Math.floor(currentPixelSize / 3));
+            ctx.globalAlpha = 0.4;
+            ctx.drawImage(canvas, -offset, 0);
+            ctx.globalAlpha = 0.3;
+            ctx.drawImage(canvas, offset, 0);
             ctx.globalAlpha = 1.0;
 
-            const softCanvas = document.createElement('canvas');
-            softCanvas.width = w * 0.8;
-            softCanvas.height = h * 0.8;
-            const softCtx = softCanvas.getContext('2d');
-            softCtx.drawImage(canvas, 0, 0, w * 0.8, h * 0.8);
-            ctx.clearRect(0, 0, w, h);
-            ctx.drawImage(softCanvas, 0, 0, w, h);
+            // 3. 降低亮度和对比度：灰色半透明蒙版
+            ctx.fillStyle = 'rgba(30, 30, 30, 0.4)';
+            ctx.fillRect(0, 0, w, h);
 
+            // 4. 高光溢出：小画布模糊叠加，省资源
+            const glowCanvas = document.createElement('canvas');
+            glowCanvas.width = w / 4;
+            glowCanvas.height = h / 4;
+            const glowCtx = glowCanvas.getContext('2d');
+            glowCtx.fillStyle = 'black';
+            glowCtx.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
+            glowCtx.drawImage(canvas, 0, 0, glowCanvas.width, glowCanvas.height);
+            glowCtx.globalCompositeOperation = 'source-atop';
+            glowCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            glowCtx.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.6;
+            ctx.drawImage(glowCanvas, 0, 0, w, h);
+            ctx.globalAlpha = 1.0;
+            ctx.globalCompositeOperation = 'source-over';
+
+            // 5. OSD 时间戳和REC
             ctx.fillStyle = 'white';
             ctx.font = 'bold 18px monospace';
             ctx.shadowColor = 'black';
