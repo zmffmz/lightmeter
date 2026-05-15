@@ -617,72 +617,49 @@
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
-        async function startRecording() {
+       async function startRecording() {
     if (mode !== 'camera') return;
     recordedChunks = [];
-
-    // 获取麦克风音频流
-    try {
-        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch(e) {
-        console.warn('麦克风不可用，将录制静音视频');
-        audioStream = null;
-    }
-
-    // 获取 Canvas 视频流
+    
+    // 只获取视频流，不请求麦克风
     const videoStream = canvas.captureStream(10);
-    let combinedStream;
-    if (audioStream) {
-        combinedStream = new MediaStream([
-            ...videoStream.getVideoTracks(),
-            ...audioStream.getAudioTracks()
-        ]);
-    } else {
-        combinedStream = videoStream;
-    }
-
-    // 优先选择 MP4 编码器，确保输出格式正确
-    const mimeTypes = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    
+    // 选择编码格式
+    const mimeTypes = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
     let selectedMime = '';
     for (let mt of mimeTypes) {
         if (MediaRecorder.isTypeSupported(mt)) { selectedMime = mt; break; }
     }
-    if (!selectedMime) selectedMime = 'video/webm'; // 最终回退
-
-    mediaRecorder = new MediaRecorder(combinedStream, {
+    if (!selectedMime) selectedMime = 'video/webm';
+    
+    mediaRecorder = new MediaRecorder(videoStream, {
         mimeType: selectedMime,
-        audioBitsPerSecond: 128000,  // 提升到 128kbps，语音清晰
-        videoBitsPerSecond: 2500000 // 2.5Mbps 保证画面质量
+        videoBitsPerSecond: 2500000
     });
-
+    
     mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) recordedChunks.push(e.data);
     };
-
+    
     mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: selectedMime });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        // 根据最终选择的编码器确定文件后缀
         const ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
         link.download = 'pixel_video.' + ext;
         link.href = url;
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         recordedChunks = [];
-        if (audioStream) {
-            audioStream.getTracks().forEach(t => t.stop());
-            audioStream = null;
-        }
     };
-
+    
     mediaRecorder.onerror = (e) => {
         console.error('录制错误', e);
         recording = false;
         recordBtn.textContent = '录制';
         recordBtn.classList.remove('recording');
     };
-
+    
     mediaRecorder.start();
     recording = true;
     recordBtn.textContent = '停止';
