@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>像素相机</title>
+    <title>像素相机 · 复古DV</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
@@ -142,7 +142,7 @@
             <button id="recordBtn">录制</button>
             <button id="downloadBtn" class="primary">保存</button>
         </div>
-        <div class="info">v3.1</div>
+        <div class="info">v3.2 · 稳定录制 · 修复色差与发灰</div>
         <div class="warning" id="warning"></div>
     </div>
     <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -194,7 +194,6 @@
         let recording = false;
         let mediaRecorder = null;
         let recordedChunks = [];
-        let recordingMimeType = 'video/webm';
         let audioStream = null;
 
         let dvStyleEnabled = false;
@@ -388,69 +387,71 @@
             }
         }
 
-        // ★ 性能优化版 DV 风格：极少的像素操作，大量使用画布合成
+        // ========== 稳定可用的 DV 风格（修复色差与发灰） ==========
         function applyVHSStyle() {
-    const w = canvas.width;
-    const h = canvas.height;
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('zh-CN');
-    const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
+            const w = canvas.width;
+            const h = canvas.height;
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('zh-CN');
+            const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
 
-    // 1. 扫描线
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    for (let y = 0; y < h; y += 2) {
-        ctx.fillRect(0, y, w, 1);
-    }
+            // 1. 扫描线
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+            for (let y = 0; y < h; y += 2) {
+                ctx.fillRect(0, y, w, 1);
+            }
 
-    // 2. 轻微色差
-    const offset = Math.max(2, Math.floor(currentPixelSize / 3));
-    ctx.globalAlpha = 0.4;
-    ctx.drawImage(canvas, -offset, 0);
-    ctx.globalAlpha = 0.3;
-    ctx.drawImage(canvas, offset, 0);
-    ctx.globalAlpha = 1.0;
+            // 2. 色差偏移（清晰可见）
+            const offset = Math.max(3, Math.floor(currentPixelSize / 2));
+            // 红色通道左移
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(canvas, -offset, 0);
+            // 蓝色通道右移
+            ctx.globalAlpha = 0.4;
+            ctx.drawImage(canvas, offset, 0);
+            ctx.globalAlpha = 1.0;
 
-    // 3. 降低亮度和对比度（减轻发灰）
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(0, 0, w, h);
+            // 3. 轻微降低亮度/对比度（不过度发灰）
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, w, h);
 
-    // 4. 高光溢出（轻量）
-    const glowCanvas = document.createElement('canvas');
-    glowCanvas.width = w / 4;
-    glowCanvas.height = h / 4;
-    const glowCtx = glowCanvas.getContext('2d');
-    glowCtx.fillStyle = 'black';
-    glowCtx.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
-    glowCtx.drawImage(canvas, 0, 0, glowCanvas.width, glowCanvas.height);
-    glowCtx.globalCompositeOperation = 'source-atop';
-    glowCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    glowCtx.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(glowCanvas, 0, 0, w, h);
-    ctx.globalAlpha = 1.0;
-    ctx.globalCompositeOperation = 'source-over';
+            // 4. 高光溢出（柔和版）
+            const glowCanvas = document.createElement('canvas');
+            glowCanvas.width = w / 4;
+            glowCanvas.height = h / 4;
+            const glowCtx = glowCanvas.getContext('2d');
+            glowCtx.fillStyle = 'black';
+            glowCtx.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
+            glowCtx.drawImage(canvas, 0, 0, glowCanvas.width, glowCanvas.height);
+            glowCtx.globalCompositeOperation = 'source-atop';
+            glowCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            glowCtx.fillRect(0, 0, glowCanvas.width, glowCanvas.height);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(glowCanvas, 0, 0, w, h);
+            ctx.globalAlpha = 1.0;
+            ctx.globalCompositeOperation = 'source-over';
 
-    // 5. OSD
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 18px monospace';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 2;
-    const margin = 8;
-    ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
-    ctx.font = 'bold 16px monospace';
-    if (recBlink) {
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(w - 20, margin + 6, 4, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    ctx.fillStyle = 'white';
-    ctx.fillText('REC', w - 40, margin + 10);
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = 'transparent';
-}
+            // 5. OSD 时间戳和REC（加大字体）
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 18px monospace';
+            ctx.shadowColor = 'black';
+            ctx.shadowBlur = 2;
+            const margin = 8;
+            ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
+            ctx.font = 'bold 16px monospace';
+            if (recBlink) {
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(w - 20, margin + 6, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.fillStyle = 'white';
+            ctx.fillText('REC', w - 40, margin + 10);
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
+        }
 
         function pixelateData(imageData, size) {
             const data = imageData.data;
@@ -597,9 +598,11 @@
         freezeBtn.addEventListener('click', toggleFreeze);
         canvas.addEventListener('click', toggleFreeze);
 
+        // ========== 录制功能（修复自动停止、无声） ==========
         async function startRecording() {
             if (mode !== 'camera') return;
             recordedChunks = [];
+            // 获取麦克风
             try {
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             } catch(e) {
@@ -609,38 +612,55 @@
             const videoStream = canvas.captureStream(10);
             let combinedStream;
             if (audioStream) {
-                const audioTracks = audioStream.getAudioTracks();
-                const videoTracks = videoStream.getVideoTracks();
-                combinedStream = new MediaStream([...videoTracks, ...audioTracks]);
+                combinedStream = new MediaStream([
+                    ...videoStream.getVideoTracks(),
+                    ...audioStream.getAudioTracks()
+                ]);
             } else {
                 combinedStream = videoStream;
             }
-            recordingMimeType = 'video/webm';
-            if (MediaRecorder.isTypeSupported('video/mp4')) {
-                recordingMimeType = 'video/mp4';
+
+            // 选择最佳支持格式
+            const mimeTypes = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+            let selectedMime = '';
+            for (let mt of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(mt)) { selectedMime = mt; break; }
             }
+            if (!selectedMime) selectedMime = 'video/webm';
+
             mediaRecorder = new MediaRecorder(combinedStream, {
-                mimeType: recordingMimeType,
-                audioBitsPerSecond: 8000
+                mimeType: selectedMime,
+                audioBitsPerSecond: 8000,
+                videoBitsPerSecond: 2500000
             });
+
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data && e.data.size > 0) recordedChunks.push(e.data);
             };
+
             mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: recordingMimeType });
+                const blob = new Blob(recordedChunks, { type: selectedMime });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                const ext = (recordingMimeType === 'video/mp4') ? 'mp4' : 'webm';
+                const ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
                 link.download = 'pixel_video.' + ext;
                 link.href = url;
                 link.click();
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 recordedChunks = [];
                 if (audioStream) {
-                    audioStream.getTracks().forEach(track => track.stop());
+                    audioStream.getTracks().forEach(t => t.stop());
                     audioStream = null;
                 }
             };
+
+            mediaRecorder.onerror = (e) => {
+                console.error('录制错误', e);
+                recording = false;
+                recordBtn.textContent = '录制';
+                recordBtn.classList.remove('recording');
+            };
+
             mediaRecorder.start();
             recording = true;
             recordBtn.textContent = '停止';
@@ -661,13 +681,11 @@
             else stopRecording();
         });
 
+        // ========== 拍照保存（toBlob防卡死） ==========
         downloadBtn.addEventListener('click', () => {
             if (canvas.width === 0) return;
             canvas.toBlob((blob) => {
-                if (!blob) {
-                    alert('图片生成失败，请重试');
-                    return;
-                }
+                if (!blob) { alert('图片生成失败，请重试'); return; }
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
@@ -682,15 +700,11 @@
         pixelSlider.addEventListener('input', () => {
             currentPixelSize = parseInt(pixelSlider.value);
             pixelValue.textContent = currentPixelSize;
-            cachedMask = null;
-            cachedMaskBlockSize = 0;
-            cachedMaskSize = 0;
+            cachedMask = null; cachedMaskBlockSize = 0; cachedMaskSize = 0;
             if (mode === 'upload' && uploadedImage) processImage();
         });
 
-        window.addEventListener('beforeunload', () => {
-            stopCamera();
-        });
+        window.addEventListener('beforeunload', () => { stopCamera(); });
 
         updateFilterUI();
         initCamera();
