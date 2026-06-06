@@ -383,7 +383,7 @@
             flash.classList.add('fire');
             setTimeout(() => flash.classList.remove('fire'), 120);
             canvas.toBlob(blob => {
-                if (!blob) { warningEl.textContent = '拍照失败'; return; }
+                if (!blob) return;
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 const now = new Date();
@@ -392,7 +392,6 @@
                 a.download = 'DV301_' + ts + '.png';
                 a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                warningEl.textContent = '';
             }, 'image/png');
         }
         function pad(n) { return String(n).padStart(2, '0'); }
@@ -421,7 +420,6 @@
             stopCamera();
             frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结';
             canvas.style.display = 'none'; placeholder.style.display = 'flex'; placeholder.textContent = '启动中…';
-            warningEl.textContent = '';
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: 640, height: 640 },
                 audio: false
@@ -443,11 +441,9 @@
                 canvas.height = canvas.width;
                 startLoop();
                 placeholder.style.display = 'none'; canvas.style.display = 'block';
-                warningEl.textContent = '';
             }).catch(err => {
                 console.error(err);
-                warningEl.textContent = '摄像头不可用，请使用上传';
-                placeholder.textContent = '请点「上传」';
+                placeholder.textContent = '摄像头不可用，请使用上传';
             });
         }
 
@@ -466,7 +462,7 @@
             else { frozen = true; if (canvas.width > 0) frozenFrame = ctx.getImageData(0,0,canvas.width,canvas.height); freezeBtn.textContent = '解冻'; }
         }
 
-        // 录制（自动同步音画）
+        // ========== 录制（优先 MP4 格式，自动降级） ==========
         async function startRecording() {
             if (mode !== 'camera' || recording) return;
             recordedChunks = [];
@@ -483,14 +479,17 @@
                     hasAudio = true;
                 });
             } catch (e) {
-                warningEl.textContent = '麦克风权限未授予，将录制无声视频';
+                // 麦克风不可用，继续录制无声视频
             }
 
+            // 优先选择 MP4 编码（H.264 + AAC），然后降级到 WebM
             const mimes = [
+                'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+                'video/mp4;codecs=avc1.42E01E',
+                'video/mp4',
                 'video/webm;codecs=vp8,opus',
                 'video/webm;codecs=vp9,opus',
-                'video/webm',
-                'video/mp4'
+                'video/webm'
             ];
             let mimeType = '';
             for (const m of mimes) {
@@ -521,7 +520,8 @@
                 const now = new Date();
                 const ts = [now.getFullYear(), pad(now.getMonth()+1), pad(now.getDate())].join('') + '_' +
                            [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join('');
-                a.download = 'DV301_' + ts + '.' + (mimeType.includes('mp4') ? 'mp4' : 'webm');
+                const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+                a.download = 'DV301_' + ts + '.' + ext;
                 a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 recordedChunks = [];
