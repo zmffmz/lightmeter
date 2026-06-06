@@ -22,20 +22,12 @@
         canvas { display:block; width:100%; height:100%; image-rendering:pixelated; }
         .placeholder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#444; font-size:13px; pointer-events:none; z-index:1; }
 
-        /* 扫描线叠加（DV模式显示） */
-        .scanlines {
-            position:absolute; inset:0; pointer-events:none; z-index:4; display:none;
-            background: repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 1px,
-                rgba(0,0,0,0.15) 1px,
-                rgba(0,0,0,0.15) 2px
-            );
-        }
+        /* 扫描线 */
+        .scanlines { position:absolute; inset:0; pointer-events:none; z-index:4; display:none;
+            background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px); }
         .scanlines.active { display:block; }
 
-        /* REC 指示灯 */
+        /* REC 灯 */
         .dv-rec-light { position:absolute; top:10px; right:10px; display:flex; align-items:center; gap:4px; z-index:5; pointer-events:none; }
         .dv-rec-dot { width:7px; height:7px; border-radius:50%; background:#c0392b; box-shadow:0 0 8px #c0392b; opacity:0; transition:opacity 0.2s; }
         .dv-rec-dot.active { opacity:1; animation:recPulse 0.9s infinite; }
@@ -43,7 +35,7 @@
         .dv-rec-text.active { opacity:1; }
         @keyframes recPulse { 0%,100%{ opacity:1; } 50%{ opacity:0.12; } }
 
-        /* 日期 OSD */
+        /* 日期 */
         .dv-date { position:absolute; bottom:10px; left:10px; font-size:12px; color:#fff; font-family:'Courier New', monospace; font-weight:bold; text-shadow:0 0 4px #000; z-index:5; pointer-events:none; }
 
         .dv-zoom-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; }
@@ -64,10 +56,9 @@
         .dv-btn.toggle { gap:5px; } .dv-btn.toggle .sw-dot { width:8px; height:4px; border-radius:2px; background:#555; transition:all 0.2s; }
         .dv-btn.toggle.active { background:linear-gradient(180deg, #6a3d80 0%, #4a2060 100%); color:#e0c0ff; box-shadow:0 3px 8px rgba(120,60,160,0.35); }
         .dv-btn.toggle.active .sw-dot { background:#c090ff; box-shadow:0 0 6px #c090ff; }
+
         .dv-bottom-row { display:flex; gap:8px; align-items:stretch; }
         .dv-grip { flex:1; height:28px; background:repeating-linear-gradient(90deg, #2a2a30 0px, #2a2a30 4px, #33333a 4px, #33333a 8px); border-radius:4px; border:1px solid #3a3a3e; opacity:0.45; }
-        .warning { color:#ff7777; font-size:11px; text-align:center; max-width:360px; padding:0 10px; min-height:16px; }
-        .info { color:#555; font-size:10px; text-align:center; letter-spacing:1px; }
         .flash-overlay { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:10; border-radius:3px; transition:opacity 0.08s; }
         .flash-overlay.fire { opacity:0.9; }
         input[type="file"] { display:none; }
@@ -117,13 +108,10 @@
         </div>
         <div class="dv-bottom-row"><div class="dv-grip"></div></div>
     </div>
-    <div class="warning" id="warning"></div>
-    <div class="info">按住 ◀W 缩小 / 按住 T▶ 放大 · 500×500 像素 · 录制 24fps</div>
-    <input type="file" id="fileInput" accept="image/*">
 
     <script>
     (function() {
-        // DOM 元素
+        // DOM 元素（移除了 warning 和 info 元素，创建一个虚拟对象避免报错）
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -134,7 +122,8 @@
         const recText = document.getElementById('recText');
         const dateLabel = document.getElementById('dateLabel');
         const filterLabel = document.getElementById('filterLabel');
-        const warningEl = document.getElementById('warning');
+        // 使用虚拟元素，使原有代码中的警告赋值不报错
+        const warningEl = { set textContent(val){} };
         const zoomLabel = document.getElementById('zoomLabel');
         const fileInput = document.getElementById('fileInput');
         const uploadBtn = document.getElementById('uploadBtn');
@@ -151,8 +140,8 @@
         // 常量
         const FILTERS = ['none', 'red', 'blue', 'bw'];
         const FILTER_CN = { none:'原色', red:'红黑', blue:'蓝黑', bw:'黑白' };
-        const TARGET_BLOCKS = 500;      // 500×500 像素块
-        const BASE_BLOCK = 1;           // 每个块在canvas上的物理像素数
+        const TARGET_BLOCKS = 500;
+        const BASE_BLOCK = 1;
         const MAX_ZOOM = 4;
         const ZOOM_SPEED = 1.2;
 
@@ -167,6 +156,7 @@
         let mode = 'camera';
         let recording = false, mediaRecorder = null, recordedChunks = [];
         let dvEnabled = false;
+        let audioStream = null;
 
         let stream = null;
         let animationId = null;
@@ -178,7 +168,7 @@
         const offBlockCanvas = document.createElement('canvas');
         const offBlockCtx = offBlockCanvas.getContext('2d');
 
-        // 日期更新
+        // 更新日期
         function updateDateHTML() {
             const now = new Date();
             const y = now.getFullYear();
@@ -263,7 +253,6 @@
             }
         }
 
-        // DV 效果（仅图像处理 + 色差 + 噪点 + 对比度，不绘制扫描线）
         function applyDVEffect() {
             const w = canvas.width, h = canvas.height;
             const imgData = ctx.getImageData(0,0,w,h);
@@ -297,10 +286,8 @@
                 d[i+2] = Math.min(255, Math.max(0, b));
             }
             ctx.putImageData(imgData,0,0);
-            // 扫描线由 CSS 实现
         }
 
-        // 核心像素化处理
         function processImageDataWithZoom(sourceCanvas, sourceCtx, sourceX, sourceY, sourceSize) {
             const cropSize = sourceSize / zoomLevel;
             const aSize = Math.ceil(cropSize);
@@ -348,15 +335,9 @@
             ctx.drawImage(offTemp, 0, 0, TARGET_BLOCKS, TARGET_BLOCKS, 0, 0, outputSize, outputSize);
 
             if (dvEnabled) applyDVEffect();
-            // 控制 CSS 扫描线显隐
-            if (dvEnabled) {
-                scanlinesOverlay.classList.add('active');
-            } else {
-                scanlinesOverlay.classList.remove('active');
-            }
+            scanlinesOverlay.classList.toggle('active', dvEnabled);
         }
 
-        // 摄像头帧处理
         function pixelateFrame() {
             if (!stream || !videoReady || video.readyState < 2) return;
             const vw = video.videoWidth || 640;
@@ -365,7 +346,6 @@
             processImageDataWithZoom(video, null, 0, 0, raw);
         }
 
-        // 上传图片处理
         function processImage() {
             if (!uploadedImage) return;
             const iw = uploadedImage.width, ih = uploadedImage.height;
@@ -391,13 +371,12 @@
             requestAnimationFrame(loop);
         }
 
-        // 拍照
         function capturePhoto() {
             if (canvas.width === 0) return;
             flash.classList.add('fire');
             setTimeout(() => flash.classList.remove('fire'), 120);
             canvas.toBlob(blob => {
-                if (!blob) { warningEl.textContent = '拍照失败'; return; }
+                if (!blob) return;
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 const now = new Date();
@@ -406,7 +385,6 @@
                 a.download = 'DV301_' + ts + '.png';
                 a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-                warningEl.textContent = '';
             }, 'image/png');
         }
         function pad(n) { return String(n).padStart(2, '0'); }
@@ -435,7 +413,6 @@
             stopCamera();
             frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结';
             canvas.style.display = 'none'; placeholder.style.display = 'flex'; placeholder.textContent = '启动中…';
-            warningEl.textContent = '';
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: 640, height: 640 },
                 audio: false
@@ -457,11 +434,9 @@
                 canvas.height = canvas.width;
                 startLoop();
                 placeholder.style.display = 'none'; canvas.style.display = 'block';
-                warningEl.textContent = '';
             }).catch(err => {
                 console.error(err);
-                warningEl.textContent = '摄像头不可用，请使用上传';
-                placeholder.textContent = '请点「上传」';
+                // 错误信息不再显示
             });
         }
 
@@ -480,28 +455,65 @@
             else { frozen = true; if (canvas.width > 0) frozenFrame = ctx.getImageData(0,0,canvas.width,canvas.height); freezeBtn.textContent = '解冻'; }
         }
 
-        // 录制 (24fps)
-        function startRecording() {
-            if (mode !== 'camera') return;
+        // 录制（自动同步音画）
+        async function startRecording() {
+            if (mode !== 'camera' || recording) return;
             recordedChunks = [];
-            const vs = canvas.captureStream(24);
-            const mimes = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
-            let mime = mimes.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
-            try { mediaRecorder = new MediaRecorder(vs, { mimeType: mime, videoBitsPerSecond: 2500000 }); }
-            catch (e) { warningEl.textContent = '录制不支持'; return; }
+            const canvasStream = canvas.captureStream(24);
+            const combinedStream = new MediaStream();
+
+            canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
+
+            let hasAudio = false;
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioStream.getAudioTracks().forEach(track => {
+                    combinedStream.addTrack(track);
+                    hasAudio = true;
+                });
+            } catch (e) {
+                // 静默处理，录制无声视频
+            }
+
+            const mimes = [
+                'video/webm;codecs=vp8,opus',
+                'video/webm;codecs=vp9,opus',
+                'video/webm',
+                'video/mp4'
+            ];
+            let mimeType = '';
+            for (const m of mimes) {
+                if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
+            }
+            if (!mimeType) return;
+
+            try {
+                mediaRecorder = new MediaRecorder(combinedStream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: 2500000,
+                    audioBitsPerSecond: hasAudio ? 128000 : 0
+                });
+            } catch (e) {
+                return;
+            }
+
             mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
             mediaRecorder.onstop = () => {
                 if (recordedChunks.length === 0) return;
-                const blob = new Blob(recordedChunks, { type: mime });
+                const blob = new Blob(recordedChunks, { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 const now = new Date();
                 const ts = [now.getFullYear(), pad(now.getMonth()+1), pad(now.getDate())].join('') + '_' +
                            [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join('');
-                a.download = 'DV301_' + ts + '.' + (mime.includes('mp4') ? 'mp4' : 'webm');
+                a.download = 'DV301_' + ts + '.' + (mimeType.includes('mp4') ? 'mp4' : 'webm');
                 a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 recordedChunks = [];
+                if (audioStream) {
+                    audioStream.getTracks().forEach(t => t.stop());
+                    audioStream = null;
+                }
             };
             mediaRecorder.start();
             recording = true;
