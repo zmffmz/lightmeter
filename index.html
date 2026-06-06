@@ -6,262 +6,918 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>像素相机</title>
+    <title>像素相机 · DV-301</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            background: #000; color: #fff;
-            font-family: 'Courier New', monospace;
-            height: 100dvh; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            overflow: hidden; touch-action: manipulation;
-            user-select: none; -webkit-user-select: none;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        #viewfinder {
+
+        body {
+            background: #1a1a1e;
+            font-family: 'Courier New', 'PingFang SC', 'Microsoft YaHei', monospace;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            gap: 12px;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* ==================== DV 机身 ==================== */
+        .dv-body {
+            width: 100%;
+            max-width: 360px;
+            background: linear-gradient(180deg, #4e4e56 0%, #3e3e44 20%, #36363c 50%, #2e2e33 100%);
+            border-radius: 14px 14px 22px 22px;
+            padding: 16px 14px 18px;
             position: relative;
-            width: 100vw; height: 100vw;
-            max-width: 500px; max-height: 500px;
-            background: #111; overflow: hidden;
-            border: 2px solid #333;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                0 14px 36px rgba(0, 0, 0, 0.55);
+            background-image:
+                linear-gradient(180deg, #4e4e56 0%, #3e3e44 20%, #36363c 50%, #2e2e33 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 1px,
+                    rgba(255, 255, 255, 0.005) 1px, rgba(255, 255, 255, 0.005) 2px);
+        }
+
+        .dv-screw {
+            position: absolute;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #5a5a5a, #1a1a1a);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7);
+            z-index: 2;
+        }
+        .dv-screw.tl { top: 8px; left: 10px; }
+        .dv-screw.tr { top: 8px; right: 10px; }
+        .dv-screw.bl { bottom: 8px; left: 10px; }
+        .dv-screw.br { bottom: 8px; right: 10px; }
+
+        .dv-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            padding: 0 6px;
+        }
+        .dv-model {
+            font-size: 9px;
+            color: #777;
+            letter-spacing: 3px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+        .dv-badge {
+            font-size: 7px;
+            color: #555;
+            letter-spacing: 2px;
+            font-family: Arial, sans-serif;
+            border: 1px solid #3a3a3a;
+            padding: 1px 6px;
+            border-radius: 2px;
+        }
+
+        /* ==================== 取景器 ==================== */
+        .dv-viewfinder {
+            background: #19191d;
+            border-radius: 8px;
+            padding: 6px;
+            box-shadow:
+                inset 0 4px 18px rgba(0, 0, 0, 0.75),
+                0 1px 0 rgba(255, 255, 255, 0.03);
             margin-bottom: 8px;
-            display: flex; align-items: center; justify-content: center;
+            position: relative;
+        }
+        .dv-viewfinder-inner {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            background: #0a0a0d;
+            border-radius: 3px;
+            overflow: hidden;
+            box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.55);
         }
         video { display: none; }
         canvas {
-            display: block; width: 100%; height: 100%;
+            display: block;
+            width: 100%;
+            height: 100%;
             image-rendering: pixelated;
         }
         .placeholder {
-            color: #555; font-size: 16px; text-align: center;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #444;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .dv-rec-light {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 5;
             pointer-events: none;
         }
-        .controls {
-            width: 100%; max-width: 500px;
+        .dv-rec-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #c0392b;
+            box-shadow: 0 0 8px #c0392b;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .dv-rec-dot.active { opacity: 1; animation: recPulse 0.9s infinite; }
+        .dv-rec-text {
+            font-size: 7px;
+            color: #ff5555;
+            font-weight: bold;
+            letter-spacing: 2px;
+            font-family: Arial, sans-serif;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .dv-rec-text.active { opacity: 1; }
+        @keyframes recPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.12; }
+        }
+
+        .dv-status-bar {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+            font-size: 7px;
+            color: #00cc44;
+            font-family: 'Courier New', monospace;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        /* ==================== 变焦拨杆 ==================== */
+        .dv-zoom-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 8px;
+            padding: 0 8px;
+        }
+        .dv-zoom-label {
+            font-size: 9px;
+            color: #999;
+            letter-spacing: 2px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .dv-zoom-track {
+            flex: 1;
+            height: 12px;
+            background: linear-gradient(180deg, #1e1e22 0%, #28282e 100%);
+            border-radius: 6px;
+            position: relative;
+            cursor: pointer;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
+            border: 1px solid #3a3a3e;
+            max-width: 240px;
+            touch-action: none;
+        }
+        .dv-zoom-ticks {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            padding: 0 10px;
+        }
+        .dv-zoom-tick {
+            width: 1px;
+            height: 5px;
+            background: #555;
+            border-radius: 1px;
+        }
+        .dv-zoom-thumb {
+            width: 28px;
+            height: 26px;
+            background: linear-gradient(180deg, #62626c 0%, #42424a 100%);
+            border-radius: 5px;
+            position: absolute;
+            top: -7px;
+            transform: translateX(-50%);
+            box-shadow:
+                0 3px 8px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.07);
+            cursor: grab;
+            border: 1px solid #505058;
+            z-index: 3;
+            transition: left 0.06s ease-out;
+            touch-action: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dv-zoom-thumb:active { cursor: grabbing; }
+        .dv-zoom-thumb::after {
+            content: '';
+            width: 14px;
+            height: 2px;
+            background: repeating-linear-gradient(90deg,
+                    #555 0px, #555 1px, transparent 1px, transparent 3px);
+            border-radius: 1px;
+            opacity: 0.6;
+        }
+        .dv-zoom-value {
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #d4af37;
+            color: #1a1a1a;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+        .dv-zoom-value.show { opacity: 1; }
+
+        /* ==================== 滤镜切换 ==================== */
+        .dv-filter-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
             padding: 0 20px;
-            display: flex; flex-direction: column; gap: 8px;
         }
-        .filter-row {
-            display: flex; gap: 10px; justify-content: center; align-items: center;
+        .dv-filter-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            color: #ccc;
+            background: linear-gradient(180deg, #585860 0%, #3c3c42 100%);
+            box-shadow:
+                0 3px 6px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.07);
+            transition: all 0.08s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
         }
-        .filter-arrow {
-            width: 38px; height: 38px; padding: 0;
-            border-radius: 50%; font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-            background: #2a2a2a; border: 1px solid #444;
-            color: #ddd; cursor: pointer; font-weight: bold;
+        .dv-filter-btn:active {
+            box-shadow:
+                0 1px 2px rgba(0, 0, 0, 0.5),
+                inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            transform: translateY(2px);
+            background: linear-gradient(180deg, #3c3c42 0%, #585860 100%);
+        }
+        .dv-filter-name {
+            font-size: 13px;
+            color: #d4af37;
+            letter-spacing: 3px;
+            font-weight: bold;
+            min-width: 50px;
+            text-align: center;
+            padding: 6px 14px;
+            background: #1e1e24;
+            border-radius: 20px;
+            border: 1px solid #35353a;
+        }
+
+        /* ==================== 按键网格 ==================== */
+        .dv-btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+        .dv-btn {
+            height: 40px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #ccc;
+            background: linear-gradient(180deg, #585860 0%, #3c3c42 100%);
+            box-shadow:
+                0 3px 6px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.07);
+            transition: all 0.08s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .dv-btn:active {
+            box-shadow:
+                0 1px 2px rgba(0, 0, 0, 0.5),
+                inset 0 2px 4px rgba(0, 0, 0, 0.4);
+            transform: translateY(2px);
+            background: linear-gradient(180deg, #3c3c42 0%, #585860 100%);
+        }
+        .dv-btn.rec {
+            background: linear-gradient(180deg, #d94040 0%, #a02020 100%);
+            color: #fff;
+            box-shadow:
+                0 3px 8px rgba(192, 57, 43, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            letter-spacing: 2px;
+        }
+        .dv-btn.rec:active {
+            background: linear-gradient(180deg, #a02020 0%, #d94040 100%);
+            box-shadow:
+                0 1px 3px rgba(192, 57, 43, 0.3),
+                inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .dv-btn.rec.recording { animation: recPulse 1s infinite; }
+        .dv-btn.toggle { gap: 5px; }
+        .dv-btn.toggle .sw-dot {
+            width: 8px;
+            height: 4px;
+            border-radius: 2px;
+            background: #555;
             transition: all 0.2s;
         }
-        .filter-arrow:active { background: #3a3a3a; }
-        .filter-label {
-            display: inline-block;
-            min-width: 80px;
-            text-align: center;
-            font-weight: bold;
-            color: #d4af37;
-            font-size: 15px;
-            padding: 8px 16px;
-            background: #1a1a1a;
-            border-radius: 20px;
-            border: 1px solid #444;
+        .dv-btn.toggle.active {
+            background: linear-gradient(180deg, #6a3d80 0%, #4a2060 100%);
+            color: #e0c0ff;
+            box-shadow: 0 3px 8px rgba(120, 60, 160, 0.35);
         }
-        .slider-group {
-            display: flex; align-items: center; gap: 10px;
-            background: #1a1a1a; padding: 8px 14px;
-            border-radius: 30px; border: 1px solid #333;
+        .dv-btn.toggle.active .sw-dot {
+            background: #c090ff;
+            box-shadow: 0 0 6px #c090ff;
         }
-        .slider-group label {
-            font-size: 14px; color: #aaa; width: 55px;
+
+        /* ==================== 底部握把 ==================== */
+        .dv-bottom-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
         }
-        input[type=range] {
-            flex: 1; accent-color: #d4af37;
+        .dv-grip {
+            flex: 1;
+            height: 28px;
+            background: repeating-linear-gradient(90deg,
+                    #2a2a30 0px, #2a2a30 4px,
+                    #33333a 4px, #33333a 8px);
+            border-radius: 4px;
+            border: 1px solid #3a3a3e;
+            opacity: 0.45;
         }
-        .slider-value {
-            width: 36px; text-align: center; font-weight: bold;
-            color: #d4af37; font-size: 16px;
-        }
-        .btn-row {
-            display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
-        }
-        button {
-            background: #2a2a2a; border: 1px solid #444;
-            color: #ddd; padding: 10px 14px; border-radius: 25px;
-            font-size: 14px; font-weight: bold; cursor: pointer;
-            transition: all 0.2s; white-space: nowrap;
-        }
-        button:active { background: #3a3a3a; }
-        button.primary { background: #d4af37; color: #000; border-color: #d4af37; }
-        button.recording { background: #c0392b; color: #fff; border-color: #c0392b; animation: pulse 1s infinite; }
-        button.dv-active { background: #8e44ad; color: #fff; border-color: #8e44ad; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
+
         .warning {
-            color: #ff7777; font-size: 13px; text-align: center;
-            margin-top: 2px; padding: 0 20px;
+            color: #ff7777;
+            font-size: 11px;
+            text-align: center;
+            max-width: 360px;
+            padding: 0 10px;
+            min-height: 16px;
         }
         .info {
-            color: #888; font-size: 12px; text-align: center;
-            margin-top: 2px;
+            color: #555;
+            font-size: 10px;
+            text-align: center;
+            letter-spacing: 1px;
         }
+        .flash-overlay {
+            position: absolute;
+            inset: 0;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+            border-radius: 3px;
+            transition: opacity 0.08s;
+        }
+        .flash-overlay.fire { opacity: 0.9; }
+
+        input[type="file"] { display: none; }
     </style>
 </head>
 <body>
-    <div id="viewfinder">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="outputCanvas"></canvas>
-        <div class="placeholder" id="placeholder">上传照片 或 使用摄像头</div>
+
+    <div class="dv-body">
+        <div class="dv-screw tl"></div>
+        <div class="dv-screw tr"></div>
+        <div class="dv-screw bl"></div>
+        <div class="dv-screw br"></div>
+
+        <div class="dv-top-bar">
+            <span class="dv-model">PIXELCAM</span>
+            <span class="dv-badge">DV-301</span>
+        </div>
+
+        <!-- 取景器 -->
+        <div class="dv-viewfinder">
+            <div class="dv-viewfinder-inner">
+                <video id="video" autoplay playsinline muted></video>
+                <canvas id="outputCanvas"></canvas>
+                <div class="flash-overlay" id="flash"></div>
+                <div class="placeholder" id="placeholder">按「拍照」启动</div>
+                <div class="dv-rec-light">
+                    <div class="dv-rec-dot" id="recDot"></div>
+                    <span class="dv-rec-text" id="recText">REC</span>
+                </div>
+                <div class="dv-status-bar">
+                    <span id="chLabel">CH-01</span>
+                    <span id="timerLabel">--:--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 变焦拨杆 -->
+        <div class="dv-zoom-row">
+            <span class="dv-zoom-label">W</span>
+            <div class="dv-zoom-track" id="zoomTrack">
+                <div class="dv-zoom-ticks">
+                    <span class="dv-zoom-tick"></span>
+                    <span class="dv-zoom-tick"></span>
+                    <span class="dv-zoom-tick"></span>
+                    <span class="dv-zoom-tick"></span>
+                    <span class="dv-zoom-tick"></span>
+                </div>
+                <div class="dv-zoom-thumb" id="zoomThumb">
+                    <span class="dv-zoom-value" id="zoomValue">8</span>
+                </div>
+            </div>
+            <span class="dv-zoom-label">T</span>
+        </div>
+
+        <!-- 滤镜切换 -->
+        <div class="dv-filter-row">
+            <button class="dv-filter-btn" id="filterPrev">◀</button>
+            <span class="dv-filter-name" id="filterLabel">原色</span>
+            <button class="dv-filter-btn" id="filterNext">▶</button>
+        </div>
+
+        <!-- 按键区 -->
+        <div class="dv-btn-grid">
+            <button class="dv-btn" id="uploadBtn">上传</button>
+            <button class="dv-btn" id="captureBtn">拍照</button>
+            <button class="dv-btn" id="switchBtn">切换</button>
+            <button class="dv-btn" id="freezeBtn">冻结</button>
+            <button class="dv-btn toggle" id="dvBtn">
+                DV<span class="sw-dot"></span>
+            </button>
+            <button class="dv-btn rec" id="recordBtn">录制</button>
+        </div>
+
+        <!-- 握把 -->
+        <div class="dv-bottom-row">
+            <div class="dv-grip"></div>
+        </div>
     </div>
-    <div class="controls">
-        <div class="filter-row">
-            <button id="filterPrev" class="filter-arrow">◀</button>
-            <span id="filterLabel" class="filter-label">原色</span>
-            <button id="filterNext" class="filter-arrow">▶</button>
-        </div>
-        <div class="slider-group">
-            <label>像素</label>
-            <input type="range" id="pixelSize" min="2" max="40" value="8" step="1">
-            <span class="slider-value" id="pixelValue">8</span>
-        </div>
-        <div class="slider-group" id="thresholdRow">
-            <label>阈值</label>
-            <input type="range" id="thresholdSlider" min="20" max="200" value="80" step="1">
-            <span class="slider-value" id="thresholdValue">80</span>
-        </div>
-        <div class="slider-group" id="colorDepthRow">
-            <label>亮度</label>
-            <input type="range" id="colorDepthSlider" min="50" max="255" value="220" step="1">
-            <span class="slider-value" id="colorDepthValue">220</span>
-        </div>
-        <div class="btn-row">
-            <button id="uploadBtn">上传</button>
-            <button id="cameraBtn">拍照</button>
-            <button id="switchCameraBtn">切换</button>
-            <button id="freezeBtn">冻结</button>
-            <button id="dvBtn">DV</button>
-            <button id="recordBtn">录制</button>
-            <button id="downloadBtn" class="primary">保存</button>
-        </div>
-        <div class="info">v3.4</div>
-        <div class="warning" id="warning"></div>
-    </div>
-    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <div class="warning" id="warning"></div>
+    <div class="info">拖拽 W/T 拨杆调节像素 · ◀ ▶ 切换滤镜</div>
+
+    <input type="file" id="fileInput" accept="image/*">
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('outputCanvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const placeholder = document.getElementById('placeholder');
-        const pixelSlider = document.getElementById('pixelSize');
-        const pixelValue = document.getElementById('pixelValue');
-        const thresholdSlider = document.getElementById('thresholdSlider');
-        const thresholdValue = document.getElementById('thresholdValue');
-        const colorDepthSlider = document.getElementById('colorDepthSlider');
-        const colorDepthValue = document.getElementById('colorDepthValue');
-        const thresholdRow = document.getElementById('thresholdRow');
-        const colorDepthRow = document.getElementById('colorDepthRow');
-        const freezeBtn = document.getElementById('freezeBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const recordBtn = document.getElementById('recordBtn');
-        const dvBtn = document.getElementById('dvBtn');
-        const switchCameraBtn = document.getElementById('switchCameraBtn');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const cameraBtn = document.getElementById('cameraBtn');
-        const fileInput = document.getElementById('fileInput');
-        const warningEl = document.getElementById('warning');
-        const filterPrev = document.getElementById('filterPrev');
-        const filterNext = document.getElementById('filterNext');
-        const filterLabel = document.getElementById('filterLabel');
+    (function () {
+        // ========== DOM ==========
+        var video       = document.getElementById('video');
+        var canvas      = document.getElementById('outputCanvas');
+        var ctx         = canvas.getContext('2d', { willReadFrequently: true });
+        var placeholder = document.getElementById('placeholder');
+        var flash       = document.getElementById('flash');
+        var recDot      = document.getElementById('recDot');
+        var recText     = document.getElementById('recText');
+        var chLabel     = document.getElementById('chLabel');
+        var timerLabel  = document.getElementById('timerLabel');
+        var filterLabel = document.getElementById('filterLabel');
+        var warningEl   = document.getElementById('warning');
+        var fileInput   = document.getElementById('fileInput');
+        var zoomTrack   = document.getElementById('zoomTrack');
+        var zoomThumb   = document.getElementById('zoomThumb');
+        var zoomValue   = document.getElementById('zoomValue');
 
-        const filterList = ['none', 'red', 'blue', 'bw'];
-        const filterNames = { none: '原色', red: '红黑', blue: '蓝黑', bw: '黑白' };
-        let currentFilterIndex = 0;
+        var uploadBtn   = document.getElementById('uploadBtn');
+        var captureBtn  = document.getElementById('captureBtn');
+        var switchBtn   = document.getElementById('switchBtn');
+        var freezeBtn   = document.getElementById('freezeBtn');
+        var dvBtn       = document.getElementById('dvBtn');
+        var recordBtn   = document.getElementById('recordBtn');
+        var filterPrev  = document.getElementById('filterPrev');
+        var filterNext  = document.getElementById('filterNext');
 
-        let stream = null;
-        let animationId = null;
-        let frozen = false;
-        let frozenFrame = null;
-        let currentPixelSize = 8;
-        let currentFilter = 'none';
-        let currentFacingMode = 'environment';
-        let videoReady = false;
-        let initAttempted = false;
-        let thresholdValue_user = 80;
-        let colorDepth = 220;
-        let uploadedImage = null;
-        let mode = 'camera';
+        // ========== 状态 ==========
+        var FILTERS   = ['none', 'red', 'blue', 'bw'];
+        var FILTER_CN = { none: '原色', red: '红黑', blue: '蓝黑', bw: '黑白' };
+        var CH_NAMES  = ['CH-01', 'CH-02', 'CH-03', 'CH-04'];
+        var PIXEL_MIN = 2;
+        var PIXEL_MAX = 40;
 
-        let recording = false;
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let audioStream = null;
+        var stream           = null;
+        var animationId      = null;
+        var frozen           = false;
+        var frozenFrame      = null;
+        var currentPixelSize = 8;
+        var currentFilter    = 'none';
+        var filterIdx        = 0;
+        var facingMode       = 'environment';
+        var videoReady       = false;
+        var thresholdVal     = 80;
+        var colorDepth       = 220;
+        var uploadedImage    = null;
+        var mode             = 'camera';
+        var recording        = false;
+        var mediaRecorder    = null;
+        var recordedChunks   = [];
+        var dvEnabled        = false;
 
-        let dvStyleEnabled = false;
-        dvBtn.addEventListener('click', () => {
-            dvStyleEnabled = !dvStyleEnabled;
-            dvBtn.classList.toggle('dv-active', dvStyleEnabled);
+        var cachedMask = null, cachedMaskBS = 0, cachedMaskSize = 0;
+        var scanlineCanvas = null, scanlineSize = 0;
+        var offscreen = document.createElement('canvas');
+        var offCtx    = offscreen.getContext('2d', { willReadFrequently: true });
+
+        // ========== 变焦拨杆 ==========
+        var zoomDragging = false;
+        var zoomHideTimer = null;
+        var pendingPixel = currentPixelSize;
+
+        function setThumbPosition(val) {
+            var ratio = (val - PIXEL_MIN) / (PIXEL_MAX - PIXEL_MIN);
+            var trackW = zoomTrack.clientWidth;
+            var thumbW = 28;
+            var maxLeft = trackW - thumbW;
+            zoomThumb.style.left = (ratio * maxLeft + thumbW / 2) + 'px';
+        }
+
+        function getValueFromX(clientX) {
+            var rect = zoomTrack.getBoundingClientRect();
+            var thumbW = 28;
+            var maxLeft = rect.width - thumbW;
+            var relX = clientX - rect.left - thumbW / 2;
+            relX = Math.max(0, Math.min(maxLeft, relX));
+            return Math.round(PIXEL_MIN + (relX / maxLeft) * (PIXEL_MAX - PIXEL_MIN));
+        }
+
+        function showZoomBubble(val) {
+            zoomValue.textContent = val;
+            zoomValue.classList.add('show');
+            if (zoomHideTimer) clearTimeout(zoomHideTimer);
+            zoomHideTimer = setTimeout(function () {
+                zoomValue.classList.remove('show');
+            }, 600);
+        }
+
+        function applyPixelChange(val) {
+            if (currentPixelSize === val) return;
+            currentPixelSize = val;
+            invalidateCache();
+            if (mode === 'upload' && uploadedImage) processImage();
+        }
+
+        zoomThumb.addEventListener('pointerdown', function (e) {
+            zoomDragging = true;
+            zoomThumb.style.transition = 'none';
+            zoomThumb.style.cursor = 'grabbing';
+            zoomThumb.setPointerCapture(e.pointerId);
+            var val = getValueFromX(e.clientX);
+            setThumbPosition(val);
+            showZoomBubble(val);
+            pendingPixel = val;
+            e.preventDefault();
         });
 
-        let cachedMask = null;
-        let cachedMaskBlockSize = 0;
-        let cachedMaskSize = 0;
-
-        thresholdSlider.addEventListener('input', () => {
-            thresholdValue_user = parseInt(thresholdSlider.value);
-            thresholdValue.textContent = thresholdValue_user;
+        zoomTrack.addEventListener('pointerdown', function (e) {
+            if (e.target === zoomThumb) return;
+            zoomDragging = true;
+            zoomThumb.style.transition = 'left 0.06s ease-out';
+            zoomThumb.style.cursor = 'grabbing';
+            zoomThumb.setPointerCapture(e.pointerId);
+            var val = getValueFromX(e.clientX);
+            setThumbPosition(val);
+            showZoomBubble(val);
+            applyPixelChange(val);
+            pendingPixel = val;
+            e.preventDefault();
         });
-        colorDepthSlider.addEventListener('input', () => {
-            colorDepth = parseInt(colorDepthSlider.value);
-            colorDepthValue.textContent = colorDepth;
+
+        window.addEventListener('pointermove', function (e) {
+            if (!zoomDragging) return;
+            var val = getValueFromX(e.clientX);
+            setThumbPosition(val);
+            zoomValue.textContent = val;
+            zoomValue.classList.add('show');
+            pendingPixel = val;
         });
 
+        window.addEventListener('pointerup', function () {
+            if (!zoomDragging) return;
+            zoomDragging = false;
+            zoomThumb.style.cursor = 'grab';
+            zoomThumb.style.transition = 'left 0.06s ease-out';
+            applyPixelChange(pendingPixel);
+            if (zoomHideTimer) clearTimeout(zoomHideTimer);
+            zoomHideTimer = setTimeout(function () {
+                zoomValue.classList.remove('show');
+            }, 600);
+        });
+
+        setThumbPosition(currentPixelSize);
+
+        // ========== 滤镜 ==========
         function updateFilterUI() {
-            filterLabel.textContent = filterNames[currentFilter];
-            if (currentFilter === 'red' || currentFilter === 'blue') {
-                thresholdRow.style.display = 'flex';
-                colorDepthRow.style.display = 'flex';
-            } else {
-                thresholdRow.style.display = 'none';
-                colorDepthRow.style.display = 'none';
+            filterLabel.textContent = FILTER_CN[currentFilter];
+            chLabel.textContent = CH_NAMES[filterIdx];
+        }
+
+        function switchFilter(dir) {
+            filterIdx = (filterIdx + dir + FILTERS.length) % FILTERS.length;
+            currentFilter = FILTERS[filterIdx];
+            updateFilterUI();
+            if (mode === 'upload' && uploadedImage) processImage();
+        }
+
+        filterPrev.addEventListener('click', function () { switchFilter(-1); });
+        filterNext.addEventListener('click', function () { switchFilter(1); });
+
+        // ========== 滤镜逻辑 ==========
+        function applyFilter(r, g, b) {
+            switch (currentFilter) {
+                case 'red':
+                    return (r >= thresholdVal) ? [colorDepth, 15, 15] : [0, 0, 0];
+                case 'blue':
+                    return (b >= thresholdVal) ? [15, 15, colorDepth] : [0, 0, 0];
+                case 'bw': {
+                    var gy = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    var v = gy < thresholdVal ? 0 : 255;
+                    return [v, v, v];
+                }
+                default: {
+                    var rn = r / 255, gn = g / 255, bn = b / 255;
+                    var mx = Math.max(rn, gn, bn), mn = Math.min(rn, gn, bn);
+                    var l = (mx + mn) / 2;
+                    var s = 0;
+                    if (mx !== mn) s = l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn);
+                    s = Math.min(1, s * 1.8);
+                    var cf = 1.5;
+                    var rr = Math.min(255, Math.max(0, ((rn - 0.5) * cf + 0.5) * 255));
+                    var gg = Math.min(255, Math.max(0, ((gn - 0.5) * cf + 0.5) * 255));
+                    var bb = Math.min(255, Math.max(0, ((bn - 0.5) * cf + 0.5) * 255));
+                    var gy2 = 0.299 * rr + 0.587 * gg + 0.114 * bb;
+                    rr = Math.min(255, Math.max(0, gy2 + (rr - gy2) * 1.4));
+                    gg = Math.min(255, Math.max(0, gy2 + (gg - gy2) * 1.4));
+                    bb = Math.min(255, Math.max(0, gy2 + (bb - gy2) * 1.4));
+                    return [rr, gg, bb];
+                }
             }
         }
 
-        filterPrev.addEventListener('click', () => {
-            currentFilterIndex = (currentFilterIndex - 1 + filterList.length) % filterList.length;
-            currentFilter = filterList[currentFilterIndex];
-            updateFilterUI();
-            if (mode === 'upload' && uploadedImage) processImage();
-        });
-        filterNext.addEventListener('click', () => {
-            currentFilterIndex = (currentFilterIndex + 1) % filterList.length;
-            currentFilter = filterList[currentFilterIndex];
-            updateFilterUI();
-            if (mode === 'upload' && uploadedImage) processImage();
-        });
+        // ========== DV 风格 ==========
+        function applyDV() {
+            var w = canvas.width, h = canvas.height;
+            var imgData = ctx.getImageData(0, 0, w, h);
+            var d = imgData.data;
+            var offset = Math.max(2, Math.floor(currentPixelSize * 0.8));
+            var tmp = new Uint8ClampedArray(d);
+            for (var y = 0; y < h; y++) {
+                for (var x = 0; x < w; x++) {
+                    var i = (y * w + x) * 4;
+                    d[i]     = tmp[(y * w + Math.max(0, x - offset)) * 4];
+                    d[i + 2] = tmp[(y * w + Math.min(w - 1, x + offset)) * 4 + 2];
+                    d[i + 1] = tmp[i + 1];
+                }
+            }
+            for (var i = 0; i < d.length; i += 4) {
+                if (Math.random() < 0.04) {
+                    var n = Math.floor(Math.random() * 80 - 40);
+                    d[i]     = Math.min(255, Math.max(0, d[i] + n));
+                    d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
+                    d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
+                }
+            }
+            for (var i = 0; i < d.length; i += 4) {
+                var r = d[i] * 0.8, g = d[i + 1] * 0.8, b = d[i + 2] * 0.8;
+                var ct = 0.7;
+                r = 128 + (r - 128) * ct;
+                g = 128 + (g - 128) * ct;
+                b = 128 + (b - 128) * ct;
+                d[i]     = Math.min(255, Math.max(0, r));
+                d[i + 1] = Math.min(255, Math.max(0, g));
+                d[i + 2] = Math.min(255, Math.max(0, b));
+            }
+            ctx.putImageData(imgData, 0, 0);
 
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
+            if (!scanlineCanvas || scanlineSize !== w) {
+                scanlineCanvas = document.createElement('canvas');
+                scanlineCanvas.width = w;
+                scanlineCanvas.height = h;
+                var sc = scanlineCanvas.getContext('2d');
+                sc.fillStyle = 'rgba(0,0,0,0.15)';
+                for (var y = 0; y < h; y += 2) sc.fillRect(0, y, w, 1);
+                scanlineSize = w;
             }
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
+            ctx.drawImage(scanlineCanvas, 0, 0);
+
+            var now = new Date();
+            var ds = now.toLocaleDateString('zh-CN');
+            var ts = now.toLocaleTimeString('zh-CN', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+            var blink = Math.floor(now.getTime() / 500) % 2 === 0;
+            var m = 8;
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px monospace';
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 2;
+            ctx.fillText(ds + ' ' + ts, m, h - m);
+            if (blink) {
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(w - 20, m + 6, 4, 0, Math.PI * 2);
+                ctx.fill();
             }
-            videoReady = false;
+            ctx.fillStyle = '#fff';
+            ctx.fillText('REC', w - 44, m + 10);
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
         }
 
-        async function switchToCamera() {
-            if (recording) stopRecording();
-            stopCamera();
-            mode = 'camera';
-            uploadedImage = null;
-            frozen = false;
-            frozenFrame = null;
-            freezeBtn.textContent = '冻结';
-            canvas.style.display = 'none';
-            placeholder.style.display = 'block';
-            await initCamera();
+        // ========== 圆点遮罩 ==========
+        function getCircleMask(size, bs) {
+            if (cachedMask && cachedMaskBS === bs && cachedMaskSize === size) return cachedMask;
+            var mc = document.createElement('canvas');
+            mc.width = size;
+            mc.height = size;
+            var mctx = mc.getContext('2d');
+            mctx.fillStyle = '#000';
+            mctx.fillRect(0, 0, size, size);
+            var r = (bs / 2) * 0.85;
+            mctx.globalCompositeOperation = 'destination-out';
+            for (var y = 0; y < size; y += bs) {
+                for (var x = 0; x < size; x += bs) {
+                    mctx.beginPath();
+                    mctx.arc(x + bs / 2, y + bs / 2, r, 0, Math.PI * 2);
+                    mctx.fill();
+                }
+            }
+            cachedMask = mc;
+            cachedMaskBS = bs;
+            cachedMaskSize = size;
+            return mc;
+        }
+
+        function invalidateCache() {
+            cachedMask = null;
+            cachedMaskBS = 0;
+            cachedMaskSize = 0;
+            scanlineCanvas = null;
+            scanlineSize = 0;
+        }
+
+        // ========== 像素化 ==========
+        function pixelateData(imageData, size) {
+            var bs = currentPixelSize;
+            var adjSz = Math.floor(size / bs) * bs;
+            size = adjSz;
+            canvas.width = size;
+            canvas.height = size;
+            var sw = Math.floor(size / bs), sh = Math.floor(size / bs);
+            offscreen.width = sw;
+            offscreen.height = sh;
+            offCtx.imageSmoothingEnabled = false;
+            var smallImg = offCtx.createImageData(sw, sh);
+            var src = imageData.data;
+
+            for (var y = 0; y < sh; y++) {
+                for (var x = 0; x < sw; x++) {
+                    var sr = 0, sg = 0, sb = 0, c = 0;
+                    var sx0 = x * bs, sy0 = y * bs;
+                    var ex = Math.min(sx0 + bs, size), ey = Math.min(sy0 + bs, size);
+                    for (var sy = sy0; sy < ey; sy++) {
+                        for (var sx = sx0; sx < ex; sx++) {
+                            var idx = (sy * size + sx) * 4;
+                            sr += src[idx];
+                            sg += src[idx + 1];
+                            sb += src[idx + 2];
+                            c++;
+                        }
+                    }
+                    var result = applyFilter(
+                        Math.round(sr / c), Math.round(sg / c), Math.round(sb / c)
+                    );
+                    var si = (y * sw + x) * 4;
+                    smallImg.data[si]     = result[0];
+                    smallImg.data[si + 1] = result[1];
+                    smallImg.data[si + 2] = result[2];
+                    smallImg.data[si + 3] = 255;
+                }
+            }
+            offCtx.putImageData(smallImg, 0, 0);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(offscreen, 0, 0, sw, sh, 0, 0, canvas.width, canvas.height);
+
+            if (bs >= 4) {
+                var mask = getCircleMask(canvas.width, bs);
+                ctx.drawImage(mask, 0, 0);
+            }
+            if (dvEnabled) applyDV();
+        }
+
+        // ========== 摄像头帧 ==========
+        function pixelateFrame() {
+            if (!stream || !videoReady || video.readyState < 2) return;
+            var vw = video.videoWidth || 640, vh = video.videoHeight || 640;
+            var raw = Math.min(vw, vh);
+            var size = Math.floor(raw / currentPixelSize) * currentPixelSize;
+            if (size === 0) return;
+            offscreen.width = size;
+            offscreen.height = size;
+            var sx = (vw - size) / 2, sy = (vh - size) / 2;
+            offCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+            pixelateData(offCtx.getImageData(0, 0, size, size), size);
+        }
+
+        function startLoop() {
+            function loop() {
+                if (mode !== 'camera') { animationId = null; return; }
+                if (!frozen) pixelateFrame();
+                else if (frozenFrame && canvas.width > 0) ctx.putImageData(frozenFrame, 0, 0);
+                animationId = requestAnimationFrame(loop);
+            }
+            if (animationId) cancelAnimationFrame(animationId);
+            loop();
+        }
+
+        // ========== 拍照（即时保存） ==========
+        function capturePhoto() {
+            if (canvas.width === 0) return;
+            flash.classList.add('fire');
+            setTimeout(function () { flash.classList.remove('fire'); }, 120);
+
+            canvas.toBlob(function (blob) {
+                if (!blob) { warningEl.textContent = '拍照失败'; return; }
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                var now = new Date();
+                var ts = now.getFullYear() +
+                    pad(now.getMonth() + 1) +
+                    pad(now.getDate()) + '_' +
+                    pad(now.getHours()) +
+                    pad(now.getMinutes()) +
+                    pad(now.getSeconds());
+                a.download = 'DV301_' + ts + '.png';
+                a.href = url;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                warningEl.textContent = '';
+            }, 'image/png');
+        }
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        // ========== 上传 ==========
+        function processImage() {
+            if (!uploadedImage) return;
+            var iw = uploadedImage.width, ih = uploadedImage.height;
+            var raw = Math.min(iw, ih);
+            var size = Math.floor(raw / currentPixelSize) * currentPixelSize;
+            canvas.width = size;
+            canvas.height = size;
+            invalidateCache();
+            offscreen.width = size;
+            offscreen.height = size;
+            var sx = (iw - size) / 2, sy = (ih - size) / 2;
+            offCtx.drawImage(uploadedImage, sx, sy, size, size, 0, 0, size, size);
+            pixelateData(offCtx.getImageData(0, 0, size, size), size);
         }
 
         function switchToUpload(img) {
@@ -275,437 +931,231 @@
             videoReady = false;
             placeholder.style.display = 'none';
             canvas.style.display = 'block';
+            invalidateCache();
             processImage();
         }
 
-        async function initCamera() {
+        // ========== 摄像头管理 ==========
+        function stopCamera() {
+            if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            videoReady = false;
+        }
+
+        function initCamera() {
+            if (recording) stopRecording();
             stopCamera();
-            initAttempted = false;
             frozen = false;
             frozenFrame = null;
             freezeBtn.textContent = '冻结';
-            if (initAttempted) return;
-            initAttempted = true;
-            warningEl.textContent = '正在请求摄像头...';
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode, width: 640, height: 640 },
-                    audio: false
-                });
+            canvas.style.display = 'none';
+            placeholder.style.display = 'flex';
+            placeholder.textContent = '启动中…';
+            warningEl.textContent = '';
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode, width: 640, height: 640 },
+                audio: false
+            }).then(function (s) {
+                stream = s;
                 video.srcObject = stream;
-                await video.play();
-                video.addEventListener('loadedmetadata', () => {
-                    videoReady = true;
-                    setupCanvasAndStart();
-                    warningEl.textContent = '';
-                    switchCameraBtn.textContent = '切换';
-                    placeholder.style.display = 'none';
-                    canvas.style.display = 'block';
+                return video.play();
+            }).then(function () {
+                return new Promise(function (resolve) {
+                    function onReady() {
+                        video.removeEventListener('loadedmetadata', onReady);
+                        resolve();
+                    }
+                    video.addEventListener('loadedmetadata', onReady);
+                    setTimeout(function () {
+                        if (!videoReady && video.videoWidth > 0) resolve();
+                    }, 2000);
                 });
-                setTimeout(() => {
-                    if (!videoReady && video.videoWidth > 0) {
-                        videoReady = true;
-                        setupCanvasAndStart();
-                        warningEl.textContent = '';
-                        placeholder.style.display = 'none';
-                        canvas.style.display = 'block';
-                    } else if (!videoReady) {
-                        warningEl.textContent = '摄像头未能获取画面';
-                    }
-                }, 2000);
-            } catch (err) {
-                warningEl.textContent = '摄像头权限被拒绝';
-                placeholder.textContent = '请使用上传照片功能';
-                console.error('Camera error:', err);
-            }
+            }).then(function () {
+                videoReady = true;
+                var raw = Math.min(video.videoWidth, video.videoHeight) || 640;
+                var size = Math.floor(raw / currentPixelSize) * currentPixelSize;
+                canvas.width = size;
+                canvas.height = size;
+                invalidateCache();
+                startLoop();
+                placeholder.style.display = 'none';
+                canvas.style.display = 'block';
+                warningEl.textContent = '';
+            }).catch(function (err) {
+                console.error(err);
+                warningEl.textContent = '摄像头不可用，请使用上传';
+                placeholder.textContent = '请点「上传」';
+            });
         }
 
-        switchCameraBtn.addEventListener('click', () => {
-            if (mode === 'upload') return;
-            currentFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+        function switchToCamera() {
+            if (recording) stopRecording();
+            stopCamera();
+            mode = 'camera';
+            uploadedImage = null;
+            frozen = false;
+            frozenFrame = null;
+            freezeBtn.textContent = '冻结';
+            canvas.style.display = 'none';
+            placeholder.style.display = 'flex';
             initCamera();
-        });
-
-        uploadBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const img = new Image();
-                img.onload = () => switchToUpload(img);
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-
-        cameraBtn.addEventListener('click', switchToCamera);
-
-        function setupCanvasAndStart() {
-            const rawSize = Math.min(video.videoWidth, video.videoHeight) || 640;
-            const size = Math.floor(rawSize / currentPixelSize) * currentPixelSize;
-            canvas.width = size;
-            canvas.height = size;
-            cachedMask = null;
-            cachedMaskBlockSize = 0;
-            cachedMaskSize = 0;
-            startPixelLoop();
         }
 
-        function processImage() {
-            if (!uploadedImage) return;
-            const imgW = uploadedImage.width;
-            const imgH = uploadedImage.height;
-            const rawSize = Math.min(imgW, imgH);
-            const size = Math.floor(rawSize / currentPixelSize) * currentPixelSize;
-            canvas.width = size;
-            canvas.height = size;
-            cachedMask = null;
-            cachedMaskBlockSize = 0;
-            cachedMaskSize = 0;
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = size;
-            tempCanvas.height = size;
-            const sx = (imgW - size) / 2;
-            const sy = (imgH - size) / 2;
-            tempCtx.drawImage(uploadedImage, sx, sy, size, size, 0, 0, size, size);
-            const imageData = tempCtx.getImageData(0, 0, size, size);
-            pixelateData(imageData, size);
-        }
-
-        function applyFilterToBlock(r, g, b) {
-            switch (currentFilter) {
-                case 'red': return (r >= thresholdValue_user) ? [colorDepth, 15, 15] : [0, 0, 0];
-                case 'blue': return (b >= thresholdValue_user) ? [15, 15, colorDepth] : [0, 0, 0];
-                case 'bw': {
-                    const gray = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    const contrast = gray < 128 ? 0 : 255;
-                    return [contrast, contrast, contrast];
-                }
-                default: return [r, g, b];
-            }
-        }
-
-        // ★ 真正的复古DV风格（像素级处理，不破坏像素边界）
-        function applyVHSStyle() {
-            const w = canvas.width;
-            const h = canvas.height;
-            const imageData = ctx.getImageData(0, 0, w, h);
-            const data = imageData.data;
-
-            // 1. 色差偏移（红/蓝通道错位，偏移量随像素尺寸增大）
-            const offset = Math.max(2, Math.floor(currentPixelSize * 0.8));
-            const temp = new Uint8ClampedArray(data);
-            for (let y = 0; y < h; y++) {
-                for (let x = 0; x < w; x++) {
-                    const idx = (y * w + x) * 4;
-                    // 红色通道向左偏移
-                    const redX = Math.max(0, x - offset);
-                    const redIdx = (y * w + redX) * 4;
-                    data[idx] = temp[redIdx];
-                    // 蓝色通道向右偏移
-                    const blueX = Math.min(w - 1, x + offset);
-                    const blueIdx = (y * w + blueX) * 4;
-                    data[idx + 2] = temp[blueIdx + 2];
-                    // 绿色保持原值
-                    data[idx + 1] = temp[idx + 1];
-                }
-            }
-
-            // 2. 随机亮度噪点 (概率 4%，强度 ±40)
-            for (let i = 0; i < data.length; i += 4) {
-                if (Math.random() < 0.04) {
-                    const noise = Math.floor(Math.random() * 80 - 40);
-                    data[i] = Math.min(255, Math.max(0, data[i] + noise));
-                    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
-                    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
-                }
-            }
-
-            // 3. 降低亮度和对比度（模拟老磁带曝光不足、发灰）
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i], g = data[i + 1], b = data[i + 2];
-                // 降低亮度 20%
-                r *= 0.8; g *= 0.8; b *= 0.8;
-                // 降低对比度：向中灰压缩
-                const contrast = 0.7;
-                r = 128 + (r - 128) * contrast;
-                g = 128 + (g - 128) * contrast;
-                b = 128 + (b - 128) * contrast;
-                data[i] = Math.min(255, Math.max(0, r));
-                data[i + 1] = Math.min(255, Math.max(0, g));
-                data[i + 2] = Math.min(255, Math.max(0, b));
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-
-            // 4. 扫描线 (在像素之上叠加)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-            for (let y = 0; y < h; y += 2) {
-                ctx.fillRect(0, y, w, 1);
-            }
-
-            // 5. OSD 时间戳和REC
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('zh-CN');
-            const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const recBlink = (Math.floor(now.getTime() / 500) % 2 === 0);
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 16px monospace';
-            ctx.shadowColor = 'black';
-            ctx.shadowBlur = 2;
-            const margin = 8;
-            ctx.fillText(dateStr + ' ' + timeStr, margin, h - margin);
-            ctx.font = 'bold 14px monospace';
-            if (recBlink) {
-                ctx.fillStyle = 'red';
-                ctx.beginPath();
-                ctx.arc(w - 20, margin + 6, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.fillStyle = 'white';
-            ctx.fillText('REC', w - 40, margin + 10);
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = 'transparent';
-        }
-
-        function pixelateData(imageData, size) {
-            const data = imageData.data;
-            const blockSize = currentPixelSize;
-            const adjustedSize = Math.floor(size / blockSize) * blockSize;
-            size = adjustedSize;
-            canvas.width = size;
-            canvas.height = size;
-            const smallW = Math.floor(size / blockSize);
-            const smallH = Math.floor(size / blockSize);
-            const smallCanvas = document.createElement('canvas');
-            smallCanvas.width = smallW;
-            smallCanvas.height = smallH;
-            const smallCtx = smallCanvas.getContext('2d');
-            smallCtx.imageSmoothingEnabled = false;
-            const smallImageData = smallCtx.createImageData(smallW, smallH);
-            for (let y = 0; y < smallH; y++) {
-                for (let x = 0; x < smallW; x++) {
-                    let sumR = 0, sumG = 0, sumB = 0, count = 0;
-                    const startX = x * blockSize;
-                    const startY = y * blockSize;
-                    const endX = Math.min(startX + blockSize, size);
-                    const endY = Math.min(startY + blockSize, size);
-                    for (let sy = startY; sy < endY; sy++) {
-                        for (let sx = startX; sx < endX; sx++) {
-                            const idx = (sy * size + sx) * 4;
-                            sumR += data[idx];
-                            sumG += data[idx + 1];
-                            sumB += data[idx + 2];
-                            count++;
-                        }
-                    }
-                    let avgR = Math.round(sumR / count);
-                    let avgG = Math.round(sumG / count);
-                    let avgB = Math.round(sumB / count);
-                    if (currentFilter === 'none') {
-                        const rNorm = avgR / 255, gNorm = avgG / 255, bNorm = avgB / 255;
-                        const max = Math.max(rNorm, gNorm, bNorm);
-                        const min = Math.min(rNorm, gNorm, bNorm);
-                        const l = (max + min) / 2;
-                        let s = 0;
-                        if (max !== min) {
-                            s = l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
-                        }
-                        s = Math.min(1, s * 1.8);
-                        const contrastFactor = 1.50;
-                        avgR = Math.min(255, Math.max(0, ((rNorm - 0.5) * contrastFactor + 0.5) * 255));
-                        avgG = Math.min(255, Math.max(0, ((gNorm - 0.5) * contrastFactor + 0.5) * 255));
-                        avgB = Math.min(255, Math.max(0, ((bNorm - 0.5) * contrastFactor + 0.5) * 255));
-                        const gray = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
-                        avgR = Math.min(255, Math.max(0, gray + (avgR - gray) * 1.4));
-                        avgG = Math.min(255, Math.max(0, gray + (avgG - gray) * 1.4));
-                        avgB = Math.min(255, Math.max(0, gray + (avgB - gray) * 1.4));
-                    }
-                    const [fr, fg, fb] = applyFilterToBlock(avgR, avgG, avgB);
-                    const smallIdx = (y * smallW + x) * 4;
-                    smallImageData.data[smallIdx] = fr;
-                    smallImageData.data[smallIdx + 1] = fg;
-                    smallImageData.data[smallIdx + 2] = fb;
-                    smallImageData.data[smallIdx + 3] = 255;
-                }
-            }
-            smallCtx.putImageData(smallImageData, 0, 0);
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(smallCanvas, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
-            // 圆点遮罩（像素 ≥4 时）
-            if (blockSize >= 4) {
-                if (!cachedMask || cachedMaskBlockSize !== blockSize || cachedMaskSize !== canvas.width) {
-                    const maskCanvas = document.createElement('canvas');
-                    maskCanvas.width = canvas.width;
-                    maskCanvas.height = canvas.height;
-                    const maskCtx = maskCanvas.getContext('2d');
-                    maskCtx.fillStyle = '#000';
-                    maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-                    const radius = (blockSize / 2) * 0.85;
-                    for (let y = 0; y < canvas.height; y += blockSize) {
-                        for (let x = 0; x < canvas.width; x += blockSize) {
-                            const centerX = x + blockSize / 2;
-                            const centerY = y + blockSize / 2;
-                            maskCtx.globalCompositeOperation = 'destination-out';
-                            maskCtx.beginPath();
-                            maskCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                            maskCtx.fill();
-                        }
-                    }
-                    cachedMask = maskCanvas;
-                    cachedMaskBlockSize = blockSize;
-                    cachedMaskSize = canvas.width;
-                }
-                ctx.drawImage(cachedMask, 0, 0);
-            }
-            // DV 风格：在像素化和圆点之后应用，避免破坏像素边界
-            if (dvStyleEnabled) {
-                applyVHSStyle();
-            }
-        }
-
-        function pixelateFrame() {
-            if (!stream || !videoReady || video.readyState < 2) return;
-            const vw = video.videoWidth || 640;
-            const vh = video.videoHeight || 640;
-            const rawSize = Math.min(vw, vh);
-            const size = Math.floor(rawSize / currentPixelSize) * currentPixelSize;
-            if (size === 0) return;
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = size;
-            tempCanvas.height = size;
-            const sx = (vw - size) / 2;
-            const sy = (vh - size) / 2;
-            tempCtx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
-            const imageData = tempCtx.getImageData(0, 0, size, size);
-            pixelateData(imageData, size);
-        }
-
-        function startPixelLoop() {
-            function loop() {
-                if (mode !== 'camera') {
-                    cancelAnimationFrame(animationId);
-                    return;
-                }
-                if (!frozen) {
-                    pixelateFrame();
-                } else if (frozenFrame) {
-                    ctx.putImageData(frozenFrame, 0, 0);
-                }
-                animationId = requestAnimationFrame(loop);
-            }
-            loop();
-        }
-
+        // ========== 冻结 ==========
         function toggleFreeze() {
+            if (mode === 'upload') return;
             if (frozen) {
                 frozen = false;
                 frozenFrame = null;
                 freezeBtn.textContent = '冻结';
             } else {
                 frozen = true;
-                if (canvas.width > 0 && canvas.height > 0) {
+                if (canvas.width > 0) {
                     frozenFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 }
                 freezeBtn.textContent = '解冻';
             }
         }
 
-        freezeBtn.addEventListener('click', toggleFreeze);
-        canvas.addEventListener('click', toggleFreeze);
-
-       async function startRecording() {
-    if (mode !== 'camera') return;
-    recordedChunks = [];
-    
-    // 只获取视频流，不请求麦克风
-    const videoStream = canvas.captureStream(10);
-    
-    // 选择编码格式
-    const mimeTypes = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'];
-    let selectedMime = '';
-    for (let mt of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(mt)) { selectedMime = mt; break; }
-    }
-    if (!selectedMime) selectedMime = 'video/webm';
-    
-    mediaRecorder = new MediaRecorder(videoStream, {
-        mimeType: selectedMime,
-        videoBitsPerSecond: 2500000
-    });
-    
-    mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
-    };
-    
-    mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: selectedMime });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        const ext = selectedMime.includes('mp4') ? 'mp4' : 'webm';
-        link.download = 'pixel_video.' + ext;
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        recordedChunks = [];
-    };
-    
-    mediaRecorder.onerror = (e) => {
-        console.error('录制错误', e);
-        recording = false;
-        recordBtn.textContent = '录制';
-        recordBtn.classList.remove('recording');
-    };
-    
-    mediaRecorder.start();
-    recording = true;
-    recordBtn.textContent = '停止';
-    recordBtn.classList.add('recording');
-}
+        // ========== 录制（停止后自动保存） ==========
+        function startRecording() {
+            if (mode !== 'camera') return;
+            recordedChunks = [];
+            var vs = canvas.captureStream(10);
+            var mimes = [
+                'video/mp4;codecs=avc1.42E01E', 'video/mp4',
+                'video/webm;codecs=vp8', 'video/webm'
+            ];
+            var mime = '';
+            for (var i = 0; i < mimes.length; i++) {
+                if (MediaRecorder.isTypeSupported(mimes[i])) { mime = mimes[i]; break; }
+            }
+            if (!mime) mime = 'video/webm';
+            try {
+                mediaRecorder = new MediaRecorder(vs, {
+                    mimeType: mime,
+                    videoBitsPerSecond: 2500000
+                });
+            } catch (e) {
+                warningEl.textContent = '录制不支持：' + e.message;
+                return;
+            }
+            mediaRecorder.ondataavailable = function (e) {
+                if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+            };
+            mediaRecorder.onstop = function () {
+                if (recordedChunks.length === 0) {
+                    warningEl.textContent = '录制内容为空';
+                    return;
+                }
+                var blob = new Blob(recordedChunks, { type: mime });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                var now = new Date();
+                var ts = now.getFullYear() +
+                    pad(now.getMonth() + 1) +
+                    pad(now.getDate()) + '_' +
+                    pad(now.getHours()) +
+                    pad(now.getMinutes()) +
+                    pad(now.getSeconds());
+                a.download = 'DV301_' + ts + '.' + (mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm');
+                a.href = url;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                recordedChunks = [];
+                warningEl.textContent = '';
+            };
+            mediaRecorder.onerror = function () {
+                recording = false;
+                recordBtn.textContent = '录制';
+                recordBtn.classList.remove('recording');
+                recDot.classList.remove('active');
+                recText.classList.remove('active');
+                warningEl.textContent = '录制出错';
+            };
+            mediaRecorder.start();
+            recording = true;
+            recordBtn.textContent = '停止';
+            recordBtn.classList.add('recording');
+            recDot.classList.add('active');
+            recText.classList.add('active');
+        }
 
         function stopRecording() {
             if (!recording || !mediaRecorder) return;
-            mediaRecorder.stop();
+            try { mediaRecorder.stop(); } catch (e) { /* 忽略 */ }
             recording = false;
             recordBtn.textContent = '录制';
             recordBtn.classList.remove('recording');
+            recDot.classList.remove('active');
+            recText.classList.remove('active');
             mediaRecorder = null;
         }
 
-        recordBtn.addEventListener('click', () => {
+        // ========== 事件绑定 ==========
+        uploadBtn.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var img = new Image();
+                img.onload = function () { switchToUpload(img); };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+            fileInput.value = '';
+        });
+        captureBtn.addEventListener('click', function () {
+            if (mode === 'camera' && !videoReady) {
+                initCamera();
+                return;
+            }
+            capturePhoto();
+        });
+        switchBtn.addEventListener('click', function () {
+            if (mode === 'upload') return;
+            facingMode = facingMode === 'environment' ? 'user' : 'environment';
+            initCamera();
+        });
+        freezeBtn.addEventListener('click', toggleFreeze);
+        canvas.addEventListener('click', toggleFreeze);
+        dvBtn.addEventListener('click', function () {
+            dvEnabled = !dvEnabled;
+            if (dvEnabled) {
+                dvBtn.classList.add('active');
+            } else {
+                dvBtn.classList.remove('active');
+            }
+            if (mode === 'upload' && uploadedImage) processImage();
+        });
+        recordBtn.addEventListener('click', function () {
             if (!recording) startRecording();
             else stopRecording();
         });
 
-        downloadBtn.addEventListener('click', () => {
-            if (canvas.width === 0) return;
-            canvas.toBlob((blob) => {
-                if (!blob) { alert('图片生成失败，请重试'); return; }
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'pixel_photo.png';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-            }, 'image/png');
+        // 计时器
+        setInterval(function () {
+            if (mode === 'camera' && !frozen) {
+                var now = new Date();
+                timerLabel.textContent = now.toLocaleTimeString('zh-CN', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+            }
+        }, 1000);
+
+        // ========== 退出清理 ==========
+        window.addEventListener('beforeunload', function () {
+            if (recording) stopRecording();
+            stopCamera();
         });
 
-        pixelSlider.addEventListener('input', () => {
-            currentPixelSize = parseInt(pixelSlider.value);
-            pixelValue.textContent = currentPixelSize;
-            cachedMask = null; cachedMaskBlockSize = 0; cachedMaskSize = 0;
-            if (mode === 'upload' && uploadedImage) processImage();
-        });
-
-        window.addEventListener('beforeunload', () => { stopCamera(); });
-
+        // ========== 启动 ==========
         updateFilterUI();
         initCamera();
+    })();
     </script>
 </body>
 </html>
