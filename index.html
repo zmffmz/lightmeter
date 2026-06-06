@@ -62,6 +62,9 @@
         .flash-overlay { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:10; border-radius:3px; transition:opacity 0.08s; }
         .flash-overlay.fire { opacity:0.9; }
         input[type="file"] { display:none; }
+
+        /* 隐藏底部文字，但保留 DOM 供 JS 使用 */
+        .warning, .info { display:none; }
     </style>
 </head>
 <body>
@@ -108,10 +111,15 @@
         </div>
         <div class="dv-bottom-row"><div class="dv-grip"></div></div>
     </div>
+    <!-- 保留 DOM 但隐藏，供 JS 使用 -->
+    <div class="warning" id="warning"></div>
+    <div class="info">500×500 · 录制含同步录音 · 24fps</div>
+
+    <input type="file" id="fileInput" accept="image/*">
 
     <script>
     (function() {
-        // DOM 元素（移除了 warning 和 info 元素，创建一个虚拟对象避免报错）
+        // DOM 元素
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -122,8 +130,7 @@
         const recText = document.getElementById('recText');
         const dateLabel = document.getElementById('dateLabel');
         const filterLabel = document.getElementById('filterLabel');
-        // 使用虚拟元素，使原有代码中的警告赋值不报错
-        const warningEl = { set textContent(val){} };
+        const warningEl = document.getElementById('warning');
         const zoomLabel = document.getElementById('zoomLabel');
         const fileInput = document.getElementById('fileInput');
         const uploadBtn = document.getElementById('uploadBtn');
@@ -376,7 +383,7 @@
             flash.classList.add('fire');
             setTimeout(() => flash.classList.remove('fire'), 120);
             canvas.toBlob(blob => {
-                if (!blob) return;
+                if (!blob) { warningEl.textContent = '拍照失败'; return; }
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 const now = new Date();
@@ -385,6 +392,7 @@
                 a.download = 'DV301_' + ts + '.png';
                 a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
+                warningEl.textContent = '';
             }, 'image/png');
         }
         function pad(n) { return String(n).padStart(2, '0'); }
@@ -413,6 +421,7 @@
             stopCamera();
             frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结';
             canvas.style.display = 'none'; placeholder.style.display = 'flex'; placeholder.textContent = '启动中…';
+            warningEl.textContent = '';
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: facingMode, width: 640, height: 640 },
                 audio: false
@@ -434,9 +443,11 @@
                 canvas.height = canvas.width;
                 startLoop();
                 placeholder.style.display = 'none'; canvas.style.display = 'block';
+                warningEl.textContent = '';
             }).catch(err => {
                 console.error(err);
-                // 错误信息不再显示
+                warningEl.textContent = '摄像头不可用，请使用上传';
+                placeholder.textContent = '请点「上传」';
             });
         }
 
@@ -472,7 +483,7 @@
                     hasAudio = true;
                 });
             } catch (e) {
-                // 静默处理，录制无声视频
+                warningEl.textContent = '麦克风权限未授予，将录制无声视频';
             }
 
             const mimes = [
@@ -485,7 +496,10 @@
             for (const m of mimes) {
                 if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
             }
-            if (!mimeType) return;
+            if (!mimeType) {
+                warningEl.textContent = '浏览器不支持录制功能';
+                return;
+            }
 
             try {
                 mediaRecorder = new MediaRecorder(combinedStream, {
@@ -494,6 +508,7 @@
                     audioBitsPerSecond: hasAudio ? 128000 : 0
                 });
             } catch (e) {
+                warningEl.textContent = '无法创建录制器';
                 return;
             }
 
