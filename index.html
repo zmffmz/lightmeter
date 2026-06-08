@@ -20,6 +20,10 @@
         .dv-viewfinder-inner { position:relative; width:100%; aspect-ratio:1; background:#0a0a0d; border-radius:3px; overflow:hidden; box-shadow:inset 0 0 80px rgba(0,0,0,0.55); }
         video { display:none; }
         canvas { display:block; width:100%; height:100%; image-rendering:pixelated; }
+
+        /* 录制专用 Canvas（隐藏） */
+        #recordCanvas { display:none; }
+
         .placeholder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#444; font-size:13px; pointer-events:none; z-index:1; }
 
         /* 扫描线 */
@@ -62,8 +66,6 @@
         .flash-overlay { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:10; border-radius:3px; transition:opacity 0.08s; }
         .flash-overlay.fire { opacity:0.9; }
         input[type="file"] { display:none; }
-
-        /* 隐藏底部文字，但保留 DOM 供 JS 使用 */
         .warning, .info { display:none; }
     </style>
 </head>
@@ -79,6 +81,8 @@
             <div class="dv-viewfinder-inner">
                 <video id="video" autoplay playsinline muted></video>
                 <canvas id="outputCanvas"></canvas>
+                <!-- 隐藏的录制 Canvas -->
+                <canvas id="recordCanvas" width="500" height="500"></canvas>
                 <div class="scanlines" id="scanlinesOverlay"></div>
                 <div class="flash-overlay" id="flash"></div>
                 <div class="placeholder" id="placeholder">按「拍照」启动</div>
@@ -111,18 +115,19 @@
         </div>
         <div class="dv-bottom-row"><div class="dv-grip"></div></div>
     </div>
-    <!-- 保留 DOM 但隐藏，供 JS 使用 -->
     <div class="warning" id="warning"></div>
-    <div class="info">500×500 · 录制含同步录音 · 24fps</div>
+    <div class="info"></div>
 
     <input type="file" id="fileInput" accept="image/*">
 
     <script>
     (function() {
-        // DOM 元素
+        // DOM
         const video = document.getElementById('video');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const recordCanvas = document.getElementById('recordCanvas');
+        const recordCtx = recordCanvas.getContext('2d');
         const placeholder = document.getElementById('placeholder');
         const flash = document.getElementById('flash');
         const scanlinesOverlay = document.getElementById('scanlinesOverlay');
@@ -187,13 +192,8 @@
         updateDateHTML();
 
         // 变焦控制
-        function updateZoomDisplay() {
-            zoomLabel.textContent = zoomLevel.toFixed(1) + 'x';
-        }
-        function setZoomDirection(dir) {
-            zoomDir = dir;
-            lastZoomTime = performance.now();
-        }
+        function updateZoomDisplay() { zoomLabel.textContent = zoomLevel.toFixed(1) + 'x'; }
+        function setZoomDirection(dir) { zoomDir = dir; lastZoomTime = performance.now(); }
         function updateZoomByTime(now) {
             if (zoomDir === 0) return false;
             const dt = (now - lastZoomTime) / 1000;
@@ -220,9 +220,7 @@
         zoomT.addEventListener('pointercancel', () => setZoomDirection(0));
 
         // 滤镜
-        function updateFilterUI() {
-            filterLabel.textContent = FILTER_CN[currentFilter];
-        }
+        function updateFilterUI() { filterLabel.textContent = FILTER_CN[currentFilter]; }
         function switchFilter(dir) {
             filterIdx = (filterIdx + dir + FILTERS.length) % FILTERS.length;
             currentFilter = FILTERS[filterIdx];
@@ -295,6 +293,7 @@
             ctx.putImageData(imgData,0,0);
         }
 
+        // 核心像素化（结果输出到主 Canvas）
         function processImageDataWithZoom(sourceCanvas, sourceCtx, sourceX, sourceY, sourceSize) {
             const cropSize = sourceSize / zoomLevel;
             const aSize = Math.ceil(cropSize);
@@ -317,14 +316,12 @@
             const blocksData = offBlockCtx.getImageData(0, 0, TARGET_BLOCKS, TARGET_BLOCKS).data;
             const filteredData = ctx.createImageData(TARGET_BLOCKS, TARGET_BLOCKS);
             for (let i = 0; i < blocksData.length; i += 4) {
-                const r = blocksData[i];
-                const g = blocksData[i+1];
-                const b = blocksData[i+2];
+                const r = blocksData[i], g = blocksData[i+1], b = blocksData[i+2];
                 const [fr, fg, fb] = applyFilter(r, g, b);
-                filteredData.data[i]     = fr;
-                filteredData.data[i+1]   = fg;
-                filteredData.data[i+2]   = fb;
-                filteredData.data[i+3]   = 255;
+                filteredData.data[i]   = fr;
+                filteredData.data[i+1] = fg;
+                filteredData.data[i+2] = fb;
+                filteredData.data[i+3] = 255;
             }
 
             const blockDisplaySize = BASE_BLOCK / zoomLevel;
@@ -343,12 +340,17 @@
 
             if (dvEnabled) applyDVEffect();
             scanlinesOverlay.classList.toggle('active', dvEnabled);
+
+            // 如果正在录制，将主 Canvas 内容复制到固定尺寸的录制 Canvas
+            if (recording && recordCanvas) {
+                recordCtx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
+                recordCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, recordCanvas.width, recordCanvas.height);
+            }
         }
 
         function pixelateFrame() {
             if (!stream || !videoReady || video.readyState < 2) return;
-            const vw = video.videoWidth || 640;
-            const vh = video.videoHeight || 640;
+            const vw = video.videoWidth || 640, vh = video.videoHeight || 640;
             const raw = Math.min(vw, vh);
             processImageDataWithZoom(video, null, 0, 0, raw);
         }
@@ -359,8 +361,7 @@
             const raw = Math.min(iw, ih);
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = raw;
-            tempCanvas.height = raw;
+            tempCanvas.width = raw; tempCanvas.height = raw;
             const sx = (iw - raw) / 2, sy = (ih - raw) / 2;
             tempCtx.drawImage(uploadedImage, sx, sy, raw, raw, 0, 0, raw, raw);
             processImageDataWithZoom(tempCanvas, tempCtx, 0, 0, raw);
@@ -399,12 +400,10 @@
         function switchToUpload(img) {
             if (recording) stopRecording();
             stopCamera();
-            mode = 'upload';
-            uploadedImage = img;
+            mode = 'upload'; uploadedImage = img;
             frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结';
             videoReady = false;
-            placeholder.style.display = 'none';
-            canvas.style.display = 'block';
+            placeholder.style.display = 'none'; canvas.style.display = 'block';
             updateZoomDisplay();
             processImage();
         }
@@ -462,13 +461,17 @@
             else { frozen = true; if (canvas.width > 0) frozenFrame = ctx.getImageData(0,0,canvas.width,canvas.height); freezeBtn.textContent = '解冻'; }
         }
 
-        // ========== 录制（优先 MP4 格式，自动降级） ==========
+        // 录制（使用固定尺寸 recordCanvas，不再中断）
         async function startRecording() {
             if (mode !== 'camera' || recording) return;
             recordedChunks = [];
-            const canvasStream = canvas.captureStream(24);
-            const combinedStream = new MediaStream();
 
+            // 设置录制 Canvas 尺寸
+            recordCanvas.width = 500;
+            recordCanvas.height = 500;
+
+            const canvasStream = recordCanvas.captureStream(24);
+            const combinedStream = new MediaStream();
             canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
 
             let hasAudio = false;
@@ -478,11 +481,8 @@
                     combinedStream.addTrack(track);
                     hasAudio = true;
                 });
-            } catch (e) {
-                // 麦克风不可用，继续录制无声视频
-            }
+            } catch (e) { /* 无声录制 */ }
 
-            // 优先选择 MP4 编码（H.264 + AAC），然后降级到 WebM
             const mimes = [
                 'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
                 'video/mp4;codecs=avc1.42E01E',
@@ -495,10 +495,7 @@
             for (const m of mimes) {
                 if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
             }
-            if (!mimeType) {
-                warningEl.textContent = '浏览器不支持录制功能';
-                return;
-            }
+            if (!mimeType) { warningEl.textContent = '录制不支持'; return; }
 
             try {
                 mediaRecorder = new MediaRecorder(combinedStream, {
@@ -506,10 +503,7 @@
                     videoBitsPerSecond: 2500000,
                     audioBitsPerSecond: hasAudio ? 128000 : 0
                 });
-            } catch (e) {
-                warningEl.textContent = '无法创建录制器';
-                return;
-            }
+            } catch (e) { warningEl.textContent = '无法创建录制器'; return; }
 
             mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
             mediaRecorder.onstop = () => {
@@ -525,15 +519,16 @@
                 a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 recordedChunks = [];
-                if (audioStream) {
-                    audioStream.getTracks().forEach(t => t.stop());
-                    audioStream = null;
-                }
+                if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
             };
             mediaRecorder.start();
             recording = true;
             recordBtn.textContent = '停止'; recordBtn.classList.add('recording');
             recDot.classList.add('active'); recText.classList.add('active');
+
+            // 立即把当前主 Canvas 内容复制到录制 Canvas
+            recordCtx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
+            recordCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, recordCanvas.width, recordCanvas.height);
         }
 
         function stopRecording() {
