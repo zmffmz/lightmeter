@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#141417">
 <title>像素相机 · DV-301</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' 
-fill='%23222226'/%3E%3Crect x='6' y='9' width='20' height='14' rx='3' fill='%23e9b44c'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='%23222226'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23222226'/%3E%3Crect x='6' y='9' width='20' height='14' rx='3' fill='%23e9b44c'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='%23222226'/%3E%3C/svg%3E">
 <style>
 :root{
     --ink:#e9e7e2;
@@ -24,8 +23,7 @@ body{
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,'PingFang SC','Microsoft YaHei',sans-serif;
     min-height:100dvh;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:16px 14px calc(16px 
-+ env(safe-area-inset-bottom));
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom));
     gap:10px;
     user-select:none;-webkit-user-select:none;
     touch-action:manipulation;
@@ -36,8 +34,7 @@ body{
 .dv{
     width:100%;max-width:372px;position:relative;
     background:linear-gradient(180deg,#57575f 0%,#3d3d44 15%,#333339 52%,#29292e 100%);
-    border-radius:20px 20px 26px 
-26px;
+    border-radius:20px 20px 26px 26px;
     padding:13px 12px 15px;
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.12),
@@ -48,16 +45,14 @@ body{
 /* 侧边磨砂握把 */
 .dv::before{
     content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;
-    
-background:
+    background:
         repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px) left center/6px 62% no-repeat,
         repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px) right center/6px 62% no-repeat;
     opacity:.7;
 }
 .dv::after{
     content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-    
-background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 26%,transparent 74%,rgba(255,255,255,.03) 100%);
+    background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 26%,transparent 74%,rgba(255,255,255,.03) 100%);
 }
 .screw{
     position:absolute;width:6px;height:6px;border-radius:50%;z-index:3;
@@ -76,8 +71,7 @@ background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 26%,trans
 .lcd{
     position:relative;background:#0a0a0c;border-radius:9px;padding:5px;margin-bottom:10px;z-index:2;
     box-shadow:0 0 0 1px #16161a, inset 0 2px 14px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.055);
-    transition:box-shadow 
-.25s;
+    transition:box-shadow .25s;
 }
 .lcd.rec{box-shadow:0 0 0 1px #16161a, inset 0 2px 14px rgba(0,0,0,.95), 0 0 0 2px rgba(226,73,61,.55), 0 0 18px rgba(226,73,61,.2)}
 .lcd-inner{
@@ -93,15 +87,13 @@ background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 26%,trans
 
 .osd{position:absolute;inset:0;pointer-events:none;z-index:5;font-family:'Courier New',monospace}
 .osd-rec{
-    
-position:absolute;top:8px;left:9px;display:flex;align-items:center;gap:5px;
+    position:absolute;top:8px;left:9px;display:flex;align-items:center;gap:5px;
     font-size:9px;font-weight:700;letter-spacing:1.5px;color:#ff5a4d;
     text-shadow:0 0 6px rgba(0,0,0,.9);opacity:0;transition:opacity .18s;
 }
 .osd-rec.on{opacity:1}
 .osd-rec i{width:6px;height:6px;border-radius:50%;background:#ff4b3e;box-shadow:0 0 8px #ff4b3e;animation:pulse 1s infinite}
-@keyframes 
-pulse{0%,100%{opacity:1}50%{opacity:.15}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.15}}
 .osd-info{
     position:absolute;top:8px;right:9px;display:flex;align-items:center;gap:6px;
     font-size:9px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.82);
@@ -115,8 +107,7 @@ pulse{0%,100%{opacity:1}50%{opacity:.15}}
 }
 .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:7}
 .flash.go{animation:flashHit .3s ease-out}
-@keyframes 
-flashHit{0%{opacity:.92}100%{opacity:0}}
+@keyframes flashHit{0%{opacity:.92}100%{opacity:0}}
 
 /* 空状态 */
 .empty{
@@ -125,8 +116,7 @@ flashHit{0%{opacity:.92}100%{opacity:0}}
     background:radial-gradient(circle at 50% 45%,#131317,#08080a 70%);
 }
 .empty svg{width:28px;height:28px;color:#4a4a55;stroke-width:1.4}
-.empty.loading 
-svg{animation:breathe 1.6s ease-in-out infinite}
+.empty.loading svg{animation:breathe 1.6s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:.35}50%{opacity:.85}}
 .empty p{font-size:11.5px;line-height:1.6;color:#8a8a95;max-width:225px}
 .empty-actions{display:flex;gap:8px;margin-top:2px}
@@ -134,8 +124,7 @@ svg{animation:breathe 1.6s ease-in-out infinite}
 
 /* ================= 通用小按钮 ================= */
 .mini{
-    border:1px solid 
-var(--line);background:rgba(255,255,255,.055);color:#c9c9d2;
+    border:1px solid var(--line);background:rgba(255,255,255,.055);color:#c9c9d2;
     padding:6px 13px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;
     font-family:inherit;transition:.14s;
 }
@@ -144,8 +133,7 @@ var(--line);background:rgba(255,255,255,.055);color:#c9c9d2;
 /* ================= 控制面板 ================= */
 .deck{
     position:relative;z-index:2;
-    
-display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
     padding:9px 10px 8px;margin-bottom:13px;border-radius:12px;
     background:linear-gradient(180deg,#232329 0%,#1b1b20 55%,#202026 100%);
     box-shadow:
@@ -183,8 +171,7 @@ display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
     box-shadow:inset 0 0 0 1px rgba(233,180,76,.28),inset 0 0 14px rgba(233,180,76,.10);
 }
 .drum-shade{
-    
-position:absolute;inset:0;pointer-events:none;border-radius:9px;
+    position:absolute;inset:0;pointer-events:none;border-radius:9px;
     background:linear-gradient(180deg,rgba(9,9,12,.92) 0%,rgba(9,9,12,0) 32%,rgba(9,9,12,0) 68%,rgba(9,9,12,.92) 100%);
 }
 
@@ -192,8 +179,7 @@ position:absolute;inset:0;pointer-events:none;border-radius:9px;
 .rocker{
     position:relative;width:58px;height:74px;border-radius:12px;padding:3px;
     background:linear-gradient(180deg,#17171c,#0e0e12);
-    box-shadow:inset 0 2px 6px 
-rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06);
     display:flex;flex-direction:column;gap:2px;
     transition:transform .1s ease;
 }
@@ -201,16 +187,14 @@ rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06);
 .rocker.tilt-w{transform:perspective(90px) rotateX(-5deg)}
 .rock-half{
     flex:1;border:none;cursor:pointer;font-family:'Arial Narrow',Arial,sans-serif;
-    
-font-size:11px;font-weight:800;letter-spacing:.08em;color:#9c9caa;
+    font-size:11px;font-weight:800;letter-spacing:.08em;color:#9c9caa;
     background:linear-gradient(180deg,#4c4c57,#33333b);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 3px rgba(0,0,0,.55),0 2px 0 #0d0d10;
     transition:.07s;display:flex;align-items:center;justify-content:center;
     touch-action:none;
 }
 .rock-half.t{border-radius:10px 10px 3px 3px}
-.rock-half.w{border-radius:3px 
-3px 10px 10px}
+.rock-half.w{border-radius:3px 3px 10px 10px}
 .rock-half.pressed{
     color:#ffd88f;
     background:linear-gradient(180deg,#33333b,#4c4c57);
@@ -230,16 +214,14 @@ font-size:11px;font-weight:800;letter-spacing:.08em;color:#9c9caa;
     touch-action:manipulation;
 }
 .toggle::after{
-    
-content:"";position:absolute;left:9px;right:9px;bottom:11px;height:15px;border-radius:2px;
+    content:"";position:absolute;left:9px;right:9px;bottom:11px;height:15px;border-radius:2px;
     background:repeating-linear-gradient(180deg,rgba(255,255,255,.11) 0 1px,transparent 1px 4px);
     pointer-events:none;
 }
 .toggle .led{
     position:absolute;left:50%;top:11px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;
     background:radial-gradient(circle at 40% 35%,#3d3d45,#1a1a20);
-    box-shadow:inset 0 1px 2px rgba(0,0,0,.9),0 1px 0 
-rgba(255,255,255,.07);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.07);
     transition:.18s;
 }
 .toggle[aria-checked="true"]{
@@ -252,8 +234,7 @@ rgba(255,255,255,.07);
         0 2px 5px rgba(0,0,0,.42);
 }
 .toggle[aria-checked="true"] .led{
-    
-background:radial-gradient(circle at 40% 35%,#eaffea,#6ee27a 52%,#2f9c3c);
+    background:radial-gradient(circle at 40% 35%,#eaffea,#6ee27a 52%,#2f9c3c);
     box-shadow:0 0 9px rgba(110,226,122,.85),0 0 2px rgba(255,255,255,.9);
 }
 .toggle:active{transform:translateY(5px)}
@@ -261,15 +242,13 @@ background:radial-gradient(circle at 40% 35%,#eaffea,#6ee27a 52%,#2f9c3c);
 /* --- 侧边小键堆 --- */
 .stack{display:flex;flex-direction:column;gap:8px}
 .key{
-    
-width:44px;height:33px;border-radius:8px;border:none;cursor:pointer;
+    width:44px;height:33px;border-radius:8px;border:none;cursor:pointer;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     background:linear-gradient(180deg,#4f4f59,#33333b);color:#b9b9c5;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 3px rgba(0,0,0,.5),0 3px 0 #101014,0 5px 8px rgba(0,0,0,.4);
     transition:.07s;font-family:inherit;
 }
-.key 
-svg{display:block;width:12px;height:12px;stroke-width:1.9}
+.key svg{display:block;width:12px;height:12px;stroke-width:1.9}
 .key i{font-style:normal;font-size:7px;letter-spacing:.08em;color:#8b8b97;line-height:1}
 .key:active{
     transform:translateY(3px);
@@ -284,8 +263,7 @@ svg{display:block;width:12px;height:12px;stroke-width:1.9}
 
 .dial{
     position:relative;border:none;border-radius:50%;cursor:pointer;font-family:inherit;
-    
-display:flex;align-items:center;justify-content:center;color:#dcdce6;
+    display:flex;align-items:center;justify-content:center;color:#dcdce6;
     background:radial-gradient(circle at 36% 28%,#7a7a85 0%,#4f4f59 42%,#2c2c33 100%);
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.2),
@@ -314,8 +292,7 @@ display:flex;align-items:center;justify-content:center;color:#dcdce6;
 .dial svg{width:16px;height:16px;stroke-width:1.9;position:relative;z-index:1}
 
 .dial.shutter{
-    background:radial-gradient(circle at 36% 
-28%,#fdfbf3 0%,#ded8c7 45%,#a9a18f 100%);color:#2a2822;
+    background:radial-gradient(circle at 36% 28%,#fdfbf3 0%,#ded8c7 45%,#a9a18f 100%);color:#2a2822;
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.95),
         inset 0 -3px 7px rgba(0,0,0,.22),
@@ -326,8 +303,7 @@ display:flex;align-items:center;justify-content:center;color:#dcdce6;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -2px 5px rgba(0,0,0,.28),0 1px 0 #6d6657,0 3px 8px rgba(0,0,0,.5);
 }
 .dial.shutter .ring{
-    
-width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(40,36,28,.35);
+    width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(40,36,28,.35);
     box-shadow:0 1px 0 rgba(255,255,255,.7);position:relative;z-index:1;
 }
 
@@ -336,8 +312,7 @@ width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(40,36,28,.35);
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.32),
         inset 0 -3px 7px rgba(0,0,0,.45),
-        0 5px 0 
-#5d1310,
+        0 5px 0 #5d1310,
         0 9px 16px rgba(0,0,0,.55);
 }
 .dial.rec:active{
@@ -346,15 +321,13 @@ width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(40,36,28,.35);
 .rec-dot{
     width:16px;height:16px;border-radius:50%;background:#fff;position:relative;z-index:1;
     box-shadow:0 0 10px rgba(255,255,255,.55);
-    transition:border-radius .16s cubic-bezier(.3,1.4,.5,1),transform 
-.16s;
+    transition:border-radius .16s cubic-bezier(.3,1.4,.5,1),transform .16s;
 }
 .dial.rec.on .rec-dot{border-radius:2px;transform:scale(.78)}
 .dial.rec.on{animation:recGlow 1.15s ease-in-out infinite}
 @keyframes recGlow{
     0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -3px 7px rgba(0,0,0,.45),0 5px 0 #5d1310,0 9px 16px rgba(0,0,0,.55),0 0 0 0 rgba(226,73,61,.45)}
-    50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -3px 7px rgba(0,0,0,.45),0 5px 0 #5d1310,0 9px 16px rgba(0,0,0,.55),0 0 0 7px 
-rgba(226,73,61,0)}
+    50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -3px 7px rgba(0,0,0,.45),0 5px 0 #5d1310,0 9px 16px rgba(0,0,0,.55),0 0 0 7px rgba(226,73,61,0)}
 }
 .dial:disabled{opacity:.35;pointer-events:none}
 
@@ -364,14 +337,12 @@ video#video{position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-e
 
 /* ================= Toast ================= */
 .toast{
-    
-position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translate(-50%,14px);
+    position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translate(-50%,14px);
     background:rgba(22,22,26,.94);border:1px solid rgba(255,255,255,.1);color:#e6e6ee;
     font-size:11.5px;padding:9px 16px;border-radius:999px;z-index:200;
     opacity:0;pointer-events:none;transition:.22s cubic-bezier(.2,.9,.3,1);
     box-shadow:0 10px 26px rgba(0,0,0,.55);white-space:nowrap;max-width:92vw;
-    
-overflow:hidden;text-overflow:ellipsis;
+    overflow:hidden;text-overflow:ellipsis;
 }
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
@@ -384,21 +355,25 @@ overflow:hidden;text-overflow:ellipsis;
     .dial.xl{width:62px;height:62px}
     .dial.m{width:52px;height:52px}
 }
-@media 
-(prefers-reduced-motion:reduce){
+@media (prefers-reduced-motion:reduce){
     *{animation-duration:.001s!important;transition-duration:.001s!important}
 }
 </style>
 </head>
 <body>
 
+<noscript>
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:#141417;color:#e9e7e2;font-size:15px;line-height:1.8;text-align:center;z-index:9999">
+        这个页面需要 JavaScript。<br>请在浏览器设置里启用 JavaScript，然后刷新页面。
+    </div>
+</noscript>
+
 <div class="dv" id="dv">
     <div class="screw tl"></div><div class="screw br"></div>
 
     <div class="dv-head">
         <span class="brand">PIXEL<em>CAM</em></span>
-        <span 
-class="model">DV-301</span>
+        <span class="model">DV-301</span>
         <span class="pwr"></span>
     </div>
 
@@ -408,15 +383,13 @@ class="model">DV-301</span>
             <div class="osd">
                 <div class="osd-rec" id="osdRec"><i></i>REC <span id="osdRecTime">00:00</span></div>
                 <div class="osd-info"><span id="osdZoom">W 1.0x</span></div>
-                <div class="osd-mode" 
-id="osdMode">CAM</div>
+                <div class="osd-mode" id="osdMode">CAM</div>
                 <div class="flash" id="flashEl"></div>
             </div>
             <div class="empty loading" id="empty">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7l1.2-1.7A1.5 1.5 0 0 1 9.6 3.6h4.8c.5 0 .9.25 1.2.7L16.8 6h1.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z"/>
-                    <circle cx="12" cy="13" 
-r="3.6"/>
+                    <circle cx="12" cy="13" r="3.6"/>
                 </svg>
                 <p id="emptyMsg">正在开启摄像头…</p>
                 <div class="empty-actions" id="emptyActions" hidden>
@@ -437,8 +410,7 @@ r="3.6"/>
                 <div class="drum-win"></div>
                 <div class="drum-shade"></div>
             </div>
-            <span class="etched">胶片 <b 
-id="stockNum">1/8</b></span>
+            <span class="etched">胶片 <b id="stockNum">1/8</b></span>
         </div>
 
         <div class="stack">
@@ -447,15 +419,13 @@ id="stockNum">1/8</b></span>
                     <path d="M4 9.5h13.5l-3.2-3.2M20 14.5H6.5l3.2 3.2"/>
                 </svg><i id="flipLabel">翻转</i>
             </button>
-            <button class="key" 
-id="pixBtn" aria-label="像素档位">
+            <button class="key" id="pixBtn" aria-label="像素档位">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/>
                     <rect x="3.5" y="14.5" width="6" height="6" rx="1"/><rect x="14.5" y="14.5" width="6" height="6" rx="1"/>
                 </svg><i id="pixLabel">中</i>
             </button>
-        
-</div>
+        </div>
 
         <div class="mod">
             <button class="toggle" id="crtBtn" role="switch" aria-checked="true" aria-label="CRT 效果">
@@ -466,8 +436,7 @@ id="pixBtn" aria-label="像素档位">
 
         <div class="mod">
             <div class="rocker" id="zoomRocker">
-                <button class="rock-half t" data-dir="1" 
-aria-label="变焦拉近">T</button>
+                <button class="rock-half t" data-dir="1" aria-label="变焦拉近">T</button>
                 <button class="rock-half w" data-dir="-1" aria-label="变焦拉远">W</button>
             </div>
             <span class="etched">变焦 <b id="zoomVal">1.0×</b></span>
@@ -477,8 +446,7 @@ aria-label="变焦拉近">T</button>
     <!-- ======== 实体按键 ======== -->
     <div class="pad">
         <div class="col">
-            <button class="dial m" id="uploadBtn" 
-aria-label="上传照片">
+            <button class="dial m" id="uploadBtn" aria-label="上传照片">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/>
                 </svg>
@@ -487,8 +455,7 @@ aria-label="上传照片">
         </div>
 
         <div class="col">
-            <button class="dial xl 
-shutter" id="shutterBtn" aria-label="拍照">
+            <button class="dial xl shutter" id="shutterBtn" aria-label="拍照">
                 <span class="ring"></span>
             </button>
             <span class="cap">拍照</span>
@@ -510,6 +477,30 @@ shutter" id="shutterBtn" aria-label="拍照">
 <video id="video" autoplay muted playsinline></video>
 
 <script>
+/* 诊断看门狗：主脚本如果根本没跑起来（浏览器太旧、页面没加载完整、JS 被禁用），
+   至少把原因显示在取景器里，而不是永远停在“正在开启摄像头…” */
+window.__dvBooted = false;
+window.__dvError = '';
+window.addEventListener('error', function(e){
+    if (e && e.message) window.__dvError = e.message + (e.lineno ? '（行 ' + e.lineno + '）' : '');
+});
+setTimeout(function(){
+    if (window.__dvBooted) return;
+    var m = document.getElementById('emptyMsg');
+    var a = document.getElementById('emptyActions');
+    var box = document.getElementById('empty');
+    if (box) box.hidden = false;
+    if (m) m.textContent = '页面脚本没有运行起来' + (window.__dvError ? '：' + window.__dvError : '') + '。请刷新页面；仍然这样的话，可能是浏览器版本过旧，换 Safari / Chrome 最新版再试。';
+    if (a){
+        a.hidden = false;
+        a.innerHTML = '<button class="mini" type="button" id="__reloadBtn">刷新页面</button>';
+        var rb = document.getElementById('__reloadBtn');
+        if (rb) rb.onclick = function(){ location.reload(); };
+    }
+}, 3000);
+</script>
+
+<script>
 (function(){
 'use strict';
 
@@ -525,8 +516,7 @@ const lcdInner    = $('lcdInner');
 const emptyBox    = $('empty');
 const emptyMsg    = $('emptyMsg');
 const emptyActions= $('emptyActions');
-const osdRec      = 
-$('osdRec');
+const osdRec      = $('osdRec');
 const osdRecTime  = $('osdRecTime');
 const osdZoom     = $('osdZoom');
 const osdMode     = $('osdMode');
@@ -538,8 +528,7 @@ const drumEl      = $('filterDrum');
 const drumTrack   = $('drumTrack');
 const stockNum    = $('stockNum');
 
-const uploadBtn   = 
-$('uploadBtn');
+const uploadBtn   = $('uploadBtn');
 const shutterBtn  = $('shutterBtn');
 const recBtn      = $('recBtn');
 const recCap      = $('recCap');
@@ -554,8 +543,7 @@ const pixLabel    = $('pixLabel');
 const toastEl     = $('toast');
 
 /* ================= 常量 ================= */
-const ZOOM_MIN = 1, ZOOM_MAX = 3, ZOOM_STEP = 
-0.2;
+const ZOOM_MIN = 1, ZOOM_MAX = 3, ZOOM_STEP = 0.2;
 const MAX_REC_MS = 60000;
 const EXPORT_W = 2304;
 const DRUM_H = 24;
@@ -568,8 +556,7 @@ const DRUM_H = 24;
    shadow / high  暗部、亮部染色
    sat            饱和度
    matrix         3×3 色彩串扰矩阵，模拟三层乳剂之间的相互影响
-   bwMix          
-黑白片的三通道混合权重
+   bwMix          黑白片的三通道混合权重
    halation       高光在乳剂层里散射出的红色光晕
    grain          颗粒强度 0~1
    参数在启动时烘焙成 3×256 的查找表，逐像素只查表。 */
@@ -580,8 +567,7 @@ const STOCKS = [
         shadow:[0,0,0], high:[0,0,0], sat:1, grain:0
     },
     {
-        key:'portra400', name:'波特拉', label:'Kodak Portra 400 · 
-人像',
+        key:'portra400', name:'波特拉', label:'Kodak Portra 400 · 人像',
         black:[0.028,0.022,0.034], white:[0.975,0.978,0.982],
         contrast:0.16, gamma:[0.98,1.0,1.03],
         shadow:[0.008,0.002,0.012], high:[0.014,0.008,-0.002],
@@ -591,8 +577,7 @@ const STOCKS = [
     },
     {
         key:'gold200', name:'金200', label:'Kodak Gold 200 · 暖调',
-        black:[0.03,0.028,0.04], 
-white:[0.97,0.972,0.96],
+        black:[0.03,0.028,0.04], white:[0.97,0.972,0.96],
         contrast:0.24, gamma:[0.96,1.0,1.05],
         shadow:[0.008,0.002,0.01], high:[0.02,0.012,-0.004],
         sat:1.04, grain:0.7,
@@ -602,8 +587,7 @@ white:[0.97,0.972,0.96],
     {
         key:'pro400h', name:'富士', label:'Fujifilm Pro 400H · 清透',
         black:[0.028,0.03,0.026], white:[0.98,0.982,0.975],
-        contrast:0.2, 
-gamma:[1.05,1.0,0.97],
+        contrast:0.2, gamma:[1.05,1.0,0.97],
         shadow:[-0.002,0.006,0.014], high:[0.004,0.01,0.008],
         sat:0.9, grain:0.4,
         matrix:[0.990,0.010,0.000, 0.000,1.010,-0.010, -0.010,0.020,0.990],
@@ -613,8 +597,7 @@ gamma:[1.05,1.0,0.97],
         key:'cinestill800t', name:'电影', label:'CineStill 800T · 夜景',
         black:[0.04,0.045,0.06], white:[0.95,0.955,0.96],
         contrast:0.3, gamma:[0.97,1.0,1.06],
-        
-shadow:[-0.006,0.004,0.02], high:[0.018,0.008,-0.002],
+        shadow:[-0.006,0.004,0.02], high:[0.018,0.008,-0.002],
         sat:0.98, grain:0.8,
         matrix:[1.005,0.000,-0.005, 0.000,1.010,-0.010, -0.005,0.010,0.995],
         halation:{ amount:0.95, threshold:0.60, color:[255,80,44] }
@@ -623,8 +606,7 @@ shadow:[-0.006,0.004,0.02], high:[0.018,0.008,-0.002],
         key:'velvia50', name:'反转', label:'Fujifilm Velvia 50 · 风光',
         black:[0.005,0.005,0.01], white:[0.99,0.99,0.995],
         contrast:0.5, gamma:[0.98,1.0,1.01],
-        shadow:[0,0,0.006], 
-high:[0.006,0.002,0],
+        shadow:[0,0,0.006], high:[0.006,0.002,0],
         sat:1.2, grain:0.3,
         matrix:[1.040,-0.020,-0.020, -0.010,1.030,-0.020, -0.020,-0.020,1.040],
         halation:{ amount:0.14, threshold:0.82, color:[255,128,96] }
@@ -634,8 +616,7 @@ high:[0.006,0.002,0],
         black:[0.02,0.02,0.02], white:[0.98,0.98,0.98],
         contrast:0.42, gamma:[1,1,1],
         shadow:[0,0,0], high:[0,0,0],
-        sat:1, grain:1, bw:true, 
-bwMix:[0.36,0.54,0.10],
+        sat:1, grain:1, bw:true, bwMix:[0.36,0.54,0.10],
         halation:{ amount:0.12, threshold:0.86, color:[255,150,120] }
     },
     {
@@ -645,8 +626,7 @@ bwMix:[0.36,0.54,0.10],
         shadow:[-0.004,0.004,0.016], high:[0,0.004,0.012],
         sat:0.92, grain:0.1,
         matrix:[0.985,0.000,0.015, 0.000,1.000,0.000, 0.005,0.005,0.990]
-    
-}
+    }
 ];
 
 /* 把一种片基烘焙成查找表，之后逐像素只做三次查表 */
@@ -659,8 +639,7 @@ function stockLut(st){
         const blk = st.black[ch], wht = st.white[ch];
         const gam = st.gamma[ch], sh = st.shadow[ch], hi = st.high[ch];
         const inv = 1 / (wht - blk);
-        for (let i = 0; i < 256; 
-i++){
+        for (let i = 0; i < 256; i++){
             let x = (i / 255 - blk) * inv;
             if (x < 0) x = 0; else if (x > 1) x = 1;
             if (st.contrast > 0){
@@ -673,8 +652,7 @@ i++){
                 x += sh * k * k * k + hi * x * x * x;
                 if (x < 0) x = 0; else if (x > 1) x = 1;
             }
-            // 
-高光肩部：接近白点的地方柔化滚降，避免数码式的硬切
+            // 高光肩部：接近白点的地方柔化滚降，避免数码式的硬切
             if (st.shoulder !== false && x > 0.86){
                 const t = (x - 0.86) / 0.14;
                 x = 0.86 + 0.14 * (1 - (1 - t) * (1 - t));
@@ -687,8 +665,7 @@ i++){
 }
 
 /* 每档宽度都能整除导出宽度（2304），保证最近邻放大是整数倍、像素块不糊 */
-const PIX_LEVELS = 
-[
+const PIX_LEVELS = [
     { name:'粗', w:144, h:108 },
     { name:'中', w:192, h:144 },
     { name:'细', w:288, h:216 },
@@ -704,8 +681,7 @@ let stream = null;
 let videoReady = false;
 let facing = 'environment';
 let cameras = [];
-let currentDeviceId = 
-'';
+let currentDeviceId = '';
 
 let mode = 'camera';
 let sourceImage = null;
@@ -723,8 +699,7 @@ let recStartTs = 0;
 let recTimerId = 0;
 let capStream = null;
 let auxAudio = null;
-let zoomHoldId = 
-0;
+let zoomHoldId = 0;
 
 let toastTimer = 0;
 let previewDirty = true;   // 取景器是否需要重绘
@@ -733,8 +708,7 @@ let previewDirty = true;   // 取景器是否需要重绘
 const pixelCv = document.createElement('canvas');
 const pixelCtx = pixelCv.getContext('2d', { willReadFrequently:true });
 const recCv = document.createElement('canvas');
-const recCtx = 
-recCv.getContext('2d');
+const recCtx = recCv.getContext('2d');
 pixelCv.width = PIX_W; pixelCv.height = PIX_H;
 recCv.width = PIX_W * 4; recCv.height = PIX_H * 4;
 
@@ -742,8 +716,7 @@ recCv.width = PIX_W * 4; recCv.height = PIX_H * 4;
 const haloCv = document.createElement('canvas');
 const haloCtx = haloCv.getContext('2d', { willReadFrequently:true });
 const haloBlurCv = document.createElement('canvas');
-const haloBlurCtx = 
-haloBlurCv.getContext('2d');
+const haloBlurCtx = haloBlurCv.getContext('2d');
 const haloWideCv = document.createElement('canvas');
 const haloWideCtx = haloWideCv.getContext('2d');
 let haloImg = null;
@@ -755,8 +728,7 @@ function pad2(n){ return n < 10 ? '0' + n : '' + n; }
 
 function toast(msg, ms){
     toastEl.textContent = msg;
-    
-toastEl.classList.add('on');
+    toastEl.classList.add('on');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ toastEl.classList.remove('on'); }, ms || 1800);
 }
@@ -768,8 +740,7 @@ function haptic(ms){
 let stampKey = -1, stampText = '';
 function dateStamp(){
     const d = new Date();
-    // 
-时间戳只精确到分钟，按分钟缓存，避免每帧拼字符串
+    // 时间戳只精确到分钟，按分钟缓存，避免每帧拼字符串
     const key = Math.floor(d.getTime() / 60000);
     if (key !== stampKey){
         stampKey = key;
@@ -781,8 +752,7 @@ function dateStamp(){
 
 function fileStamp(){
     const d = new Date();
-    return '' + d.getFullYear() + 
-pad2(d.getMonth()+1) + pad2(d.getDate())
+    return '' + d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate())
          + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
 }
 
@@ -791,8 +761,7 @@ dvEl.addEventListener('pointerdown', function(e){
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
     if (b.classList.contains('drum-item') || b.classList.contains('rock-half')) return;
-    if (b.id === 'shutterBtn' || b.id === 'recBtn') 
-return;
+    if (b.id === 'shutterBtn' || b.id === 'recBtn') return;
     haptic(6);
 }, true);
 
@@ -802,8 +771,7 @@ function sizeScreen(){
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(rect.width * dpr));
     const h = Math.max(1, Math.round(rect.height * dpr));
-    if (screenCv.width !== w || screenCv.height !== 
-h){
+    if (screenCv.width !== w || screenCv.height !== h){
         screenCv.width = w;
         screenCv.height = h;
         previewDirty = true;
@@ -814,8 +782,7 @@ if (window.ResizeObserver){
 } else {
     window.addEventListener('resize', sizeScreen);
 }
-window.addEventListener('orientationchange', function(){ setTimeout(sizeScreen, 250); 
-});
+window.addEventListener('orientationchange', function(){ setTimeout(sizeScreen, 250); });
 
 /* ================= 胶片处理 ================= */
 function applyStock(d, st){
@@ -829,8 +796,7 @@ function applyStock(d, st){
     let hd = null, thr = 0, span = 1, cr = 0, cg = 0, cb = 0;
 
     if (hal && hal.amount > 0){
-        if (haloCv.width !== PIX_W 
-|| haloCv.height !== PIX_H){
+        if (haloCv.width !== PIX_W || haloCv.height !== PIX_H){
             haloCv.width = PIX_W;
             haloCv.height = PIX_H;
             haloImg = null;
@@ -842,8 +808,7 @@ function applyStock(d, st){
         hd.fill(0);
         thr = hal.threshold * 255;
         span = Math.max(1, 255 - thr);
-        cr = hal.color[0]; cg = hal.color[1]; cb = 
-hal.color[2];
+        cr = hal.color[0]; cg = hal.color[1]; cb = hal.color[2];
     }
 
     for (let i = 0; i < n; i += 4){
@@ -856,8 +821,7 @@ hal.color[2];
             r = nr; g = ng; b = nb;
         }
         if (bw){
-            l = r * bwMix[0] + g * bwMix[1] + b * 
-bwMix[2];
+            l = r * bwMix[0] + g * bwMix[1] + b * bwMix[2];
             d[i] = d[i+1] = d[i+2] = l;
         } else {
             l = r * 0.2126 + g * 0.7152 + b * 0.0722;
@@ -872,8 +836,7 @@ bwMix[2];
                 v *= v;
                 hd[i] = cr * v;
                 hd[i+1] = cg * v;
-                hd[i+2] = cb * 
-v;
+                hd[i+2] = cb * v;
                 hd[i+3] = 255;
             }
         }
@@ -884,8 +847,7 @@ v;
         // 缩到 1/8 再放大回去：一次大半径柔化，得到胶片那种宽而软的溢光
         const bw2 = Math.max(1, PIX_W >> 3);
         const bh2 = Math.max(1, PIX_H >> 3);
-        if (haloBlurCv.width !== bw2 || haloBlurCv.height !== 
-bh2){
+        if (haloBlurCv.width !== bw2 || haloBlurCv.height !== bh2){
             haloBlurCv.width = bw2;
             haloBlurCv.height = bh2;
         }
@@ -895,8 +857,7 @@ bh2){
 
         // 再缩一档，做一层更宽的尾晕；两层叠起来才是乳剂散射的衰减
         const bw3 = Math.max(1, PIX_W >> 5);
-        const bh3 = Math.max(1, 
-PIX_H >> 5);
+        const bh3 = Math.max(1, PIX_H >> 5);
         if (haloWideCv.width !== bw3 || haloWideCv.height !== bh3){
             haloWideCv.width = bw3;
             haloWideCv.height = bh3;
@@ -907,8 +868,7 @@ PIX_H >> 5);
 
         haloOn = true;
     } else {
-        haloOn = 
-false;
+        haloOn = false;
     }
 }
 
@@ -921,8 +881,7 @@ function makeDrumItem(f, i, ghost){
     b.dataset.index = ghost ? -1 : i;
     if (ghost){
         b.tabIndex = -1;
-        
-b.setAttribute('aria-hidden', 'true');
+        b.setAttribute('aria-hidden', 'true');
     }
     return b;
 }
@@ -930,8 +889,7 @@ b.setAttribute('aria-hidden', 'true');
 drumTrack.appendChild(makeDrumItem(STOCKS[STOCKS.length - 1], -1, true));
 STOCKS.forEach(function(f, i){ drumTrack.appendChild(makeDrumItem(f, i, false)); });
 drumTrack.appendChild(makeDrumItem(STOCKS[0], -1, true));
-const drumItems = 
-Array.prototype.slice.call(drumTrack.children);
+const drumItems = Array.prototype.slice.call(drumTrack.children);
 
 function highlightDrum(idx){
     for (let k = 1; k < drumItems.length - 1; k++){
@@ -943,8 +901,7 @@ function layoutDrum(animate){
     drumTrack.style.transition = animate
         ? 'transform .22s cubic-bezier(.22,1.1,.36,1)'
         : 'none';
-    drumTrack.style.transform = 
-'translateY(' + (-stockIndex * DRUM_H) + 'px)';
+    drumTrack.style.transform = 'translateY(' + (-stockIndex * DRUM_H) + 'px)';
     highlightDrum(stockIndex);
 }
 
@@ -957,8 +914,7 @@ function selectStock(i, silent){
     needsPixel = true;
     if (changed && !silent){
         haptic(7);
-        toast(STOCKS[ni].label, 
-1400);
+        toast(STOCKS[ni].label, 1400);
     }
 }
 
@@ -970,8 +926,7 @@ drumEl.addEventListener('pointerdown', function(e){
     try { drumEl.setPointerCapture(e.pointerId); } catch(err){}
     drumDrag = { y0:e.clientY, i0:stockIndex, hover:stockIndex };
     drumMoved = false;
-    drumTrack.style.transition = 
-'none';
+    drumTrack.style.transition = 'none';
 });
 
 drumEl.addEventListener('pointermove', function(e){
@@ -983,8 +938,7 @@ drumEl.addEventListener('pointermove', function(e){
     let off = (-drumDrag.i0 * DRUM_H) + dy;
     const minY = -(STOCKS.length - 1) * DRUM_H;
     if (off > 0) off = off * 0.35;
-    if (off < minY) off = minY + (off - minY) * 
-0.35;
+    if (off < minY) off = minY + (off - minY) * 0.35;
     drumTrack.style.transform = 'translateY(' + off + 'px)';
 
     const hover = clamp(Math.round(-off / DRUM_H), 0, STOCKS.length - 1);
@@ -997,8 +951,7 @@ drumEl.addEventListener('pointermove', function(e){
 });
 
 function endDrumDrag(e){
-    if (!drumDrag) 
-return;
+    if (!drumDrag) return;
     // pointercancel 时 clientY 不可信，直接停在当前高亮档
     const idx = (e.type === 'pointercancel')
         ? drumDrag.hover
@@ -1008,8 +961,7 @@ return;
     setTimeout(function(){ drumMoved = false; }, 80);
 }
 drumEl.addEventListener('pointerup', endDrumDrag);
-drumEl.addEventListener('pointercancel', 
-endDrumDrag);
+drumEl.addEventListener('pointercancel', endDrumDrag);
 
 drumEl.addEventListener('click', function(e){
     const it = e.target.closest('.drum-item');
@@ -1021,8 +973,7 @@ drumEl.addEventListener('click', function(e){
 
 drumEl.addEventListener('wheel', function(e){
     e.preventDefault();
-    if (!drumDrag) selectStock(stockIndex + (e.deltaY > 0 ? 1 : 
--1));
+    if (!drumDrag) selectStock(stockIndex + (e.deltaY > 0 ? 1 : -1));
 }, { passive:false });
 
 /* ================= 变焦摇杆 ================= */
@@ -1033,8 +984,7 @@ function updateZoomUI(){
 
 function setZoom(v, fromGesture){
     const nz = clamp(Math.round(v * 100) / 100, ZOOM_MIN, ZOOM_MAX);
-    if (!fromGesture && 
-Math.abs(nz - zoom) < 0.001) return;
+    if (!fromGesture && Math.abs(nz - zoom) < 0.001) return;
     zoom = nz;
     if (zoom <= 1.001){ panX = 0; panY = 0; }
     needsPixel = true;
@@ -1048,8 +998,7 @@ function zoomStep(dir){
 function rockDown(e){
     const btn = e.currentTarget;
     const dir = parseInt(btn.dataset.dir, 10);
-    
-e.preventDefault();
+    e.preventDefault();
     btn.classList.add('pressed');
     zoomRocker.classList.add(dir > 0 ? 'tilt-t' : 'tilt-w');
     haptic(8);
@@ -1062,8 +1011,7 @@ function rockUp(){
     clearInterval(zoomHoldId);
     zoomHoldId = 0;
     zoomRocker.classList.remove('tilt-t', 'tilt-w');
-    const hs = 
-zoomRocker.querySelectorAll('.rock-half');
+    const hs = zoomRocker.querySelectorAll('.rock-half');
     for (let i = 0; i < hs.length; i++) hs[i].classList.remove('pressed');
 }
 
@@ -1072,8 +1020,7 @@ for (let i = 0; i < rockHalves.length; i++){
     const h = rockHalves[i];
     h.addEventListener('pointerdown', rockDown);
     h.addEventListener('pointerup', rockUp);
-    
-h.addEventListener('pointercancel', rockUp);
+    h.addEventListener('pointercancel', rockUp);
     h.addEventListener('pointerleave', rockUp);
     h.addEventListener('contextmenu', function(e){ e.preventDefault(); });
 }
@@ -1093,8 +1040,7 @@ lcdInner.addEventListener('pointerdown', function(e){
         pinch = null;
     } else if (pointers.size === 2){
         const pts = Array.from(pointers.values());
-        pinch = { d: Math.hypot(pts[0].x - pts[1].x, 
-pts[0].y - pts[1].y) || 1, z: zoom };
+        pinch = { d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1, z: zoom };
         drag = null;
     }
 });
@@ -1105,8 +1051,7 @@ lcdInner.addEventListener('pointermove', function(e){
 
     if (pinch && pointers.size >= 2){
         const pts = Array.from(pointers.values());
-        const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 
-1;
+        const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
         setZoom(pinch.z * (d / pinch.d), true);
     } else if (drag && pointers.size === 1){
         const dx = e.clientX - drag.x;
@@ -1116,8 +1061,7 @@ lcdInner.addEventListener('pointermove', function(e){
             const rx = Math.max(1, rect.width * (1 - 1 / zoom));
             const ry = Math.max(1, rect.height * (1 - 1 / zoom));
             panX = clamp(drag.px + (dx / rx) * 2, -1, 1);
-            panY = clamp(drag.py + (dy / ry) * 2, -1, 
-1);
+            panY = clamp(drag.py + (dy / ry) * 2, -1, 1);
             needsPixel = true;
         }
     }
@@ -1132,8 +1076,7 @@ function endPointer(e){
         pinch = null;
     } else if (pointers.size === 1){
         const p = Array.from(pointers.values())[0];
-        drag = { x:p.x, y:p.y, px:panX, py:panY 
-};
+        drag = { x:p.x, y:p.y, px:panX, py:panY };
         pinch = null;
     }
 }
@@ -1144,8 +1087,7 @@ lcdInner.addEventListener('pointercancel', endPointer);
 function getSource(){
     if (mode === 'camera' && videoReady && video.videoWidth){
         return { el: video, w: video.videoWidth, h: video.videoHeight };
-    
-}
+    }
     if (mode === 'photo' && sourceImage){
         return { el: sourceImage, w: sourceImage.naturalWidth, h: sourceImage.naturalHeight };
     }
@@ -1157,8 +1099,7 @@ function renderPixel(){
     if (!src || !src.w || !src.h) return false;
 
     const base = Math.max(PIX_W / src.w, PIX_H / src.h);
-    const dw = src.w * base * 
-zoom;
+    const dw = src.w * base * zoom;
     const dh = src.h * base * zoom;
     const maxDX = Math.max(0, dw - PIX_W);
     const maxDY = Math.max(0, dh - PIX_H);
@@ -1170,8 +1111,7 @@ zoom;
 
     const mirrored = (mode === 'camera' && facing === 'user');
 
-    
-pixelCtx.imageSmoothingEnabled = true;
+    pixelCtx.imageSmoothingEnabled = true;
     pixelCtx.imageSmoothingQuality = 'high';
     pixelCtx.save();
     if (mirrored){
@@ -1184,8 +1124,7 @@ pixelCtx.imageSmoothingEnabled = true;
 
     const st = STOCKS[stockIndex];
     if (st.key !== 'none'){
-        const img = 
-pixelCtx.getImageData(0, 0, PIX_W, PIX_H);
+        const img = pixelCtx.getImageData(0, 0, PIX_W, PIX_H);
         applyStock(img.data, st);
         pixelCtx.putImageData(img, 0, 0);
     } else {
@@ -1197,8 +1136,7 @@ pixelCtx.getImageData(0, 0, PIX_W, PIX_H);
 /* ================= 成品合成 ================= */
 /* 颗粒：两层不同尺度的彩色噪点，围绕中灰用 overlay 混合。
    这样是“调制亮度”的胶片颗粒，而不是把灰噪点直接盖在画面上。 */
-function makeGrainTile(size, 
-block){
+function makeGrainTile(size, block){
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const g = c.getContext('2d');
@@ -1207,8 +1145,7 @@ block){
     for (let y = 0; y < size; y += block){
         for (let x = 0; x < size; x += block){
             const lum = ((Math.random() + Math.random() + Math.random()) / 3 - 0.5) * 2;
-            const r = clamp(128 + lum * 86 + (Math.random() - 0.5) * 
-34, 0, 255);
+            const r = clamp(128 + lum * 86 + (Math.random() - 0.5) * 34, 0, 255);
             const gg = clamp(128 + lum * 86 + (Math.random() - 0.5) * 34, 0, 255);
             const bb = clamp(128 + lum * 86 + (Math.random() - 0.5) * 34, 0, 255);
             for (let yy = 0; yy < block; yy++){
@@ -1218,8 +1155,7 @@ block){
                 }
             }
         }
-    
-}
+    }
     g.putImageData(img, 0, 0);
     return c;
 }
@@ -1243,8 +1179,7 @@ function vignetteFor(ctx, W, H){
         g.addColorStop(0.68, 'rgba(0,0,0,0.10)');
         g.addColorStop(1, 'rgba(0,0,0,0.46)');
         c.vig.set(k, g);
-    
-}
+    }
     return g;
 }
 
@@ -1256,8 +1191,7 @@ function scanPatternFor(ctx, H){
     if (!p){
         const tile = document.createElement('canvas');
         tile.width = 4; tile.height = step;
-        const t = 
-tile.getContext('2d');
+        const t = tile.getContext('2d');
         t.fillStyle = 'rgba(0,0,0,0.30)';
         t.fillRect(0, step - 1, 4, 1);
         p = ctx.createPattern(tile, 'repeat');
@@ -1282,8 +1216,7 @@ function drawStamp(ctx, W, H){
     const size = Math.max(11, Math.round(H * 0.046));
     const pad = Math.round(W * 0.028);
     ctx.save();
-    ctx.font = '700 ' + size + 'px "Courier New", Courier, 
-monospace';
+    ctx.font = '700 ' + size + 'px "Courier New", Courier, monospace';
     ctx.textBaseline = 'alphabetic';
     ctx.shadowColor = 'rgba(0,0,0,0.9)';
     ctx.shadowBlur = size * 0.42;
@@ -1296,8 +1229,7 @@ function compose(ctx, W, H){
     const st = STOCKS[stockIndex];
 
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(pixelCv, 0, 0, W, 
-H);
+    ctx.drawImage(pixelCv, 0, 0, W, H);
 
     // 光晕：高光在胶片乳剂层里散射。大半径那层做整体氛围，小半径那层贴着高光边缘
     if (haloOn && st.halation && st.halation.amount > 0){
@@ -1306,8 +1238,7 @@ H);
         ctx.imageSmoothingEnabled = true;
         ctx.globalAlpha = st.halation.amount * 0.5;
         ctx.drawImage(haloWideCv, 0, 0, W, H);
-        ctx.globalAlpha = 
-st.halation.amount;
+        ctx.globalAlpha = st.halation.amount;
         ctx.drawImage(haloBlurCv, 0, 0, W, H);
         ctx.restore();
     }
@@ -1322,8 +1253,7 @@ st.halation.amount;
     if (crtOn){
         ctx.fillStyle = scanPatternFor(ctx, H);
         ctx.fillRect(0, 0, W, H);
-    
-}
+    }
 
     // 颗粒：细颗粒贴着像素、粗颗粒成团，两层都用 overlay 调制原有亮度。
     // CRT 自带一点底噪，胶片按自己的强度往上加；关掉 CRT 时胶片颗粒仍在。
@@ -1332,8 +1262,7 @@ st.halation.amount;
     const fineA = Math.min(0.50, (crtOn ? 0.16 : 0) + gs * 0.26);
     if (coarseA > 0.005 || fineA > 0.005){
         ctx.save();
-        ctx.globalCompositeOperation 
-= 'overlay';
+        ctx.globalCompositeOperation = 'overlay';
         if (coarseA > 0.005){
             ctx.globalAlpha = coarseA;
             ctx.translate(-((Math.random()*128)|0), -((Math.random()*128)|0));
@@ -1343,8 +1272,7 @@ st.halation.amount;
         if (fineA > 0.005){
             ctx.globalAlpha = fineA;
             ctx.translate(-((Math.random()*256)|0), -((Math.random()*256)|0));
-            ctx.fillStyle = 
-grainFinePatternFor(ctx);
+            ctx.fillStyle = grainFinePatternFor(ctx);
             ctx.fillRect(0, 0, W + 256, H + 256);
         }
         ctx.restore();
@@ -1358,8 +1286,7 @@ function tick(){
     const live = (mode === 'camera' && videoReady);
     const redraw = live || needsPixel;
     if (redraw){
-        if (renderPixel()) 
-hasFrame = true;
+        if (renderPixel()) hasFrame = true;
         needsPixel = false;
     }
     if (!hasFrame) return;
@@ -1372,8 +1299,7 @@ hasFrame = true;
     if (recording) compose(recCtx, recCv.width, recCv.height);
 }
 
-/* ================= 摄像头 
-================= */
+/* ================= 摄像头 ================= */
 function setEmpty(kind, msg, showActions){
     emptyBox.hidden = false;
     emptyBox.classList.toggle('loading', kind === 'loading');
@@ -1384,10 +1310,15 @@ function hideEmpty(){ emptyBox.hidden = true; }
 
 function stopStream(){
     if (stream){
-        stream.getTracks().forEach(function(t){ t.stop(); 
-});
+        stream.getTracks().forEach(function(t){ t.stop(); });
         stream = null;
     }
+}
+
+/* 微信 / QQ / 微博等 App 的内置浏览器经常不弹权限框、直接把请求挂住 */
+function inAppBrowser(){
+    const ua = navigator.userAgent || '';
+    return /MicroMessenger|QQ\/|Weibo|AlipayClient|DingTalk|FBAN|FBAV|Instagram|Line\//i.test(ua);
 }
 
 function cameraErrorText(err){
@@ -1397,16 +1328,23 @@ function cameraErrorText(err){
     if (window.isSecureContext === false){
         return '当前页面不是安全上下文。浏览器只允许在 https 或 localhost 下调用摄像头。';
     }
-    const name = err && 
-err.name;
+    const name = err && err.name;
+    if (name === 'CameraTimeoutError'){
+        if (inAppBrowser()){
+            return '摄像头请求一直没有响应。微信 / QQ 等 App 的内置浏览器通常不允许调用摄像头，请点右上角「…」→「在浏览器中打开」，再用 Safari 或 Chrome 访问。';
+        }
+        return '摄像头请求一直没有响应。确认已经允许权限；如果根本没弹出权限框，请换 Safari 或 Chrome 打开，或点「重试」。';
+    }
     if (name === 'NotAllowedError' || name === 'SecurityError'){
+        if (inAppBrowser()){
+            return '这个内置浏览器不允许使用摄像头。请点右上角「…」→「在浏览器中打开」，再用 Safari 或 Chrome 访问。';
+        }
         return '摄像头权限被拒绝了。点地址栏左侧的锁 / 摄像机图标 → 摄像头 → 允许，再刷新页面。也可以在浏览器设置的「网站权限 → 摄像头」里把 localhost 改成允许。';
     }
     if (name === 'NotFoundError' || name === 'DevicesNotFoundError'){
         return '没有检测到摄像头设备。';
     }
-    if (name === 'NotReadableError' || name 
-=== 'TrackStartError'){
+    if (name === 'NotReadableError' || name === 'TrackStartError'){
         return '摄像头被其他程序占用或系统禁止访问。';
     }
     if (name === 'OverconstrainedError'){
@@ -1416,8 +1354,7 @@ err.name;
 }
 
 async function refreshCameras(){
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) 
-return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
     try{
         const list = await navigator.mediaDevices.enumerateDevices();
         cameras = list.filter(function(d){ return d.kind === 'videoinput' && d.deviceId; });
@@ -1426,15 +1363,52 @@ return;
     }
 }
 
+/* getUserMedia 在某些手机 / 内置浏览器里既不成功也不报错，会一直挂着。
+   加个超时，至少能把原因显示出来；超时后才到的流会被关掉，避免摄像头一直占着。 */
+function gumTimed(constraints, ms){
+    return new Promise(function(resolve, reject){
+        let done = false;
+        const timer = setTimeout(function(){
+            if (done) return;
+            done = true;
+            const err = new Error('摄像头响应超时');
+            err.name = 'CameraTimeoutError';
+            reject(err);
+        }, ms || 6000);
+        let req;
+        try{
+            req = navigator.mediaDevices.getUserMedia(constraints);
+        } catch(err){
+            done = true;
+            clearTimeout(timer);
+            reject(err);
+            return;
+        }
+        req.then(function(s){
+            if (done){
+                s.getTracks().forEach(function(t){ t.stop(); });
+                return;
+            }
+            done = true;
+            clearTimeout(timer);
+            resolve(s);
+        }, function(err){
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            reject(err);
+        });
+    });
+}
+
 async function openStream(constraints){
     try{
-        return await 
-navigator.mediaDevices.getUserMedia(constraints);
+        return await gumTimed(constraints, 6000);
     } catch(err){
         // 刚停掉上一个摄像头时，部分手机/浏览器会短暂报占用，等一拍再试
         if (err && (err.name === 'NotReadableError' || err.name === 'AbortError')){
             await new Promise(function(r){ setTimeout(r, 300); });
-            return await navigator.mediaDevices.getUserMedia(constraints);
+            return await gumTimed(constraints, 6000);
         }
         throw err;
     }
@@ -1450,19 +1424,19 @@ async function startCamera(opts){
     hasFrame = false;
     setEmpty('loading', '正在开启摄像头…', false);
 
-    if (!navigator.mediaDevices || 
-!navigator.mediaDevices.getUserMedia){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
         let msg;
         if (location.protocol === 'file:'){
             msg = '本地文件（file://）方式打开时浏览器禁止使用摄像头。请用本地服务器打开本页。';
         } else if (window.isSecureContext === false){
             msg = '需要通过 https 或 localhost 访问才能调用摄像头。';
+        } else if (inAppBrowser()){
+            msg = '这个 App 的内置浏览器不支持摄像头。请点右上角「…」→「在浏览器中打开」，用 Safari 或 Chrome 访问。';
         } else {
             msg = '当前浏览器不支持摄像头。';
         }
         setEmpty('error', msg, true);
-        
-return;
+        return;
     }
 
     // 采样分辨率高一点，最大变焦裁切后仍有足够细节喂给 384×288 的像素画布
@@ -1472,8 +1446,7 @@ return;
             const c = wantDevice
                 ? Object.assign({ deviceId: { exact: wantDevice } }, size)
                 : Object.assign({ facingMode: { ideal: wantFacing } }, size);
-            stream = await openStream({ video: c, audio: 
-false });
+            stream = await openStream({ video: c, audio: false });
         }catch(e1){
             if (e1 && (e1.name === 'OverconstrainedError' || e1.name === 'ConstraintNotSatisfiedError')){
                 stream = await openStream({ video: true, audio: false });
@@ -1481,8 +1454,7 @@ false });
                 // 设备 ID 可能已失效（相机被拔出、权限变化），退回 facingMode
                 stream = await openStream({
                     video: Object.assign({ facingMode: { ideal: wantFacing } }, size),
-                    audio: 
-false
+                    audio: false
                 });
             } else {
                 throw e1;
@@ -1495,8 +1467,7 @@ false
         try{
             const track = stream.getVideoTracks()[0];
             const s = track && track.getSettings ? track.getSettings() : {};
-            if (s.deviceId) 
-currentDeviceId = s.deviceId;
+            if (s.deviceId) currentDeviceId = s.deviceId;
             if (s.facingMode === 'user' || s.facingMode === 'environment') facing = s.facingMode;
         }catch(e){}
 
@@ -1510,8 +1481,7 @@ currentDeviceId = s.deviceId;
         updateModeUI();
         hideEmpty();
         needsPixel = true;
-    } 
-catch(err){
+    } catch(err){
         console.warn('[DV-301] camera error:', err);
         setEmpty('error', cameraErrorText(err), true);
     }
@@ -1527,8 +1497,7 @@ async function flipCamera(){
             updateModeUI();
             toast('已回到实时画面');
         } else {
-            await 
-startCamera();
+            await startCamera();
         }
         return;
     }
@@ -1540,8 +1509,7 @@ startCamera();
     if (cameras.length > 1){
         let idx = -1;
         for (let i = 0; i < cameras.length; i++){
-            if (cameras[i].deviceId === currentDeviceId){ idx = i; break; 
-}
+            if (cameras[i].deviceId === currentDeviceId){ idx = i; break; }
         }
         const next = cameras[(idx + 1) % cameras.length];
         await startCamera({ deviceId: next.deviceId });
@@ -1551,10 +1519,11 @@ startCamera();
 
     // 只有一个（或还没拿到设备列表）：退回 facingMode 切换
     facing = (facing === 'environment') ? 'user' : 'environment';
-    await startCamera({ facingMode: facing 
-});
+    await startCamera({ facingMode: facing });
     if (videoReady) toast(cameras.length === 1 ? '只有一个摄像头' : (facing === 'user' ? '前置摄像头' : '后置摄像头'));
 }
+
+flipBtn.addEventListener('click', function(){ flipCamera(); });
 
 /* ================= 模式 ================= */
 function updateModeUI(){
@@ -1563,8 +1532,7 @@ function updateModeUI(){
     flipLabel.textContent = photo ? '相机' : '翻转';
 }
 
-/* ================= 上传 
-================= */
+/* ================= 上传 ================= */
 function pickFile(){ fileInput.click(); }
 uploadBtn.addEventListener('click', pickFile);
 $('emptyUploadBtn').addEventListener('click', pickFile);
@@ -1574,8 +1542,7 @@ fileInput.addEventListener('change', function(e){
     const f = e.target.files && e.target.files[0];
     fileInput.value = '';
     if (!f) return;
-    const url = 
-URL.createObjectURL(f);
+    const url = URL.createObjectURL(f);
     const img = new Image();
     img.decoding = 'async';
     img.onload = function(){
@@ -1593,8 +1560,7 @@ function switchToPhoto(img){
     sourceImage = img;
     mode = 'photo';
     zoom = 1; panX = 0; panY = 0;
-    
-updateZoomUI();
+    updateZoomUI();
     updateModeUI();
     hideEmpty();
     needsPixel = true;
@@ -1622,8 +1588,7 @@ function shutter(){
 
     c.toBlob(function(blob){
         if (!blob){ toast('保存失败'); return; }
-        const name = 'DV301_' + 
-fileStamp() + '.png';
+        const name = 'DV301_' + fileStamp() + '.png';
         download(blob, name);
         toast('已保存照片');
     }, 'image/png');
@@ -1637,8 +1602,7 @@ function download(blob, name){
     const a = document.createElement('a');
     a.href = url;
     a.download = name;
-    a.style.display = 
-'none';
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     setTimeout(function(){
@@ -1652,8 +1616,7 @@ function pickMimes(){
     const list = [
         'video/mp4;codecs=avc1.42E01E',
         'video/mp4',
-        
-'video/webm;codecs=vp9',
+        'video/webm;codecs=vp9',
         'video/webm;codecs=vp8',
         'video/webm'
     ];
@@ -1664,8 +1627,7 @@ function pickMimes(){
 }
 
 function micWithTimeout(ms){
-    const req = navigator.mediaDevices.getUserMedia({ audio: true 
-});
+    const req = navigator.mediaDevices.getUserMedia({ audio: true });
     let late = false;
     const guard = new Promise(function(_, reject){
         setTimeout(function(){ late = true; reject(new Error('mic-timeout')); }, ms);
@@ -1677,8 +1639,7 @@ function micWithTimeout(ms){
 }
 
 function releaseTracks(){
-    if 
-(capStream){
+    if (capStream){
         capStream.getTracks().forEach(function(t){ t.stop(); });
         capStream = null;
     }
@@ -1690,8 +1651,7 @@ function releaseTracks(){
 
 function buildRecorder(){
     // 分辨率越高给越多码率，否则 1536×1152 会被压得很脏
-    const vbps = Math.min(14000000, 
-Math.max(6000000, PIX_W * PIX_H * 110));
+    const vbps = Math.min(14000000, Math.max(6000000, PIX_W * PIX_H * 110));
     const opts = { videoBitsPerSecond: vbps };
     const candidates = pickMimes();
     for (let i = 0; i < candidates.length; i++){
@@ -1702,8 +1662,7 @@ Math.max(6000000, PIX_W * PIX_H * 110));
             return { rec: new MediaRecorder(capStream, o), mime: m };
         } catch(e){ /* 下一个 */ }
     }
-    return 
-null;
+    return null;
 }
 
 async function startRecording(){
@@ -1716,8 +1675,7 @@ async function startRecording(){
 
     // 最多等 1.2 秒拿麦克风，超时就先录无声画面，不让用户干等权限弹窗
     let audioStream = null;
-    
-try{
+    try{
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
             audioStream = await micWithTimeout(1200);
         }
@@ -1729,8 +1687,7 @@ try{
     recCv.height = PIX_H * 4;
     compose(recCtx, recCv.width, recCv.height);
 
-    try { capStream = 
-recCv.captureStream(30); }
+    try { capStream = recCv.captureStream(30); }
     catch(e){ recBtn.disabled = false; toast('无法录制画面'); return; }
 
     if (audioStream){
@@ -1743,8 +1700,7 @@ recCv.captureStream(30); }
     if (!built){
         releaseTracks();
         recBtn.disabled = false;
-        
-toast('录像启动失败');
+        toast('录像启动失败');
         return;
     }
 
@@ -1757,8 +1713,7 @@ toast('录像启动失败');
     };
     mediaRecorder.onstop = function(){ finishRecording(); };
     mediaRecorder.onerror = function(){
-        
-toast('录制出错，已停止');
+        toast('录制出错，已停止');
         if (recording) stopRecording();
     };
 
@@ -1774,8 +1729,7 @@ toast('录制出错，已停止');
     recStartTs = Date.now();
     recBtn.disabled = false;
     recBtn.classList.add('on');
-    recCap.textContent = 
-'停止';
+    recCap.textContent = '停止';
     osdRec.classList.add('on');
     lcdWrap.classList.add('rec');
     osdRecTime.textContent = '00:00';
@@ -1787,8 +1741,7 @@ toast('录制出错，已停止');
         const ms = Date.now() - recStartTs;
         const s = Math.floor(ms / 1000);
         osdRecTime.textContent = pad2(Math.floor(s / 60)) + ':' + pad2(s % 60);
-        if (ms >= 
-MAX_REC_MS){
+        if (ms >= MAX_REC_MS){
             toast('已达单段 60 秒上限');
             stopRecording();
         }
@@ -1817,8 +1770,7 @@ function finishRecording(){
     const blob = new Blob(recordedChunks, { type: recordMime || 'video/webm' });
     recordedChunks = [];
 
-    
-releaseTracks();
+    releaseTracks();
     mediaRecorder = null;
 
     if (blob.size > 0){
@@ -1832,8 +1784,7 @@ releaseTracks();
 }
 
 recBtn.addEventListener('click', function(){
-    if (!recording) 
-startRecording();
+    if (!recording) startRecording();
     else stopRecording();
 });
 
@@ -1845,8 +1796,7 @@ function setLocked(locked){
 window.addEventListener('keydown', function(e){
     if (e.target && e.target.closest && e.target.closest('button, input, textarea')) return;
     if (e.code === 'Space'){
-        
-e.preventDefault();
+        e.preventDefault();
         shutter();
     } else if (e.key === 'r' || e.key === 'R'){
         if (recording) stopRecording(); else startRecording();
@@ -1857,8 +1807,7 @@ e.preventDefault();
         e.preventDefault();
         setZoom(zoom - ZOOM_STEP);
     } else if (e.key === 'ArrowLeft'){
-        
-e.preventDefault();
+        e.preventDefault();
         selectStock(stockIndex - 1);
     } else if (e.key === 'ArrowRight'){
         e.preventDefault();
@@ -1884,8 +1833,7 @@ crtBtn.addEventListener('click', function(){
 function setPixelLevel(i){
     pixIndex = (i + PIX_LEVELS.length) % PIX_LEVELS.length;
     const lv = PIX_LEVELS[pixIndex];
-    PIX_W = lv.w; PIX_H = 
-lv.h;
+    PIX_W = lv.w; PIX_H = lv.h;
     pixelCv.width = PIX_W;
     pixelCv.height = PIX_H;
     recCv.width = PIX_W * 4;
@@ -1912,6 +1860,8 @@ startCamera();
 setTimeout(function(){
     if (hasFrame) toast('按住 T / W 连续变焦 · 拨动滚轮换胶片', 2600);
 }, 1600);
+
+window.__dvBooted = true;
 
 })();
 </script>
