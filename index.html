@@ -1,581 +1,1620 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>像素相机 · DV-301</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#1a1a1e; font-family:'Courier New', monospace; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; gap:12px; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
-        .dv-body { width:100%; max-width:360px; background:linear-gradient(180deg, #4e4e56 0%, #3e3e44 20%, #36363c 50%, #2e2e33 100%); border-radius:14px 14px 22px 22px; padding:16px 14px 18px; position:relative; box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 14px 36px rgba(0,0,0,0.55); }
-        .dv-screw { position:absolute; width:7px; height:7px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #5a5a5a, #1a1a1a); box-shadow:inset 0 1px 2px rgba(0,0,0,0.7); z-index:2; }
-        .dv-screw.tl { top:8px; left:10px; } .dv-screw.tr { top:8px; right:10px; } .dv-screw.bl { bottom:8px; left:10px; } .dv-screw.br { bottom:8px; right:10px; }
-        .dv-top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:0 6px; }
-        .dv-model { font-size:9px; color:#777; letter-spacing:3px; font-family:Arial, sans-serif; font-weight:bold; }
-        .dv-badge { font-size:7px; color:#555; letter-spacing:2px; font-family:Arial, sans-serif; border:1px solid #3a3a3a; padding:1px 6px; border-radius:2px; }
-        .dv-viewfinder { background:#19191d; border-radius:8px; padding:6px; box-shadow:inset 0 4px 18px rgba(0,0,0,0.75), 0 1px 0 rgba(255,255,255,0.03); margin-bottom:8px; position:relative; }
-        .dv-viewfinder-inner { position:relative; width:100%; aspect-ratio:1; background:#0a0a0d; border-radius:3px; overflow:hidden; box-shadow:inset 0 0 80px rgba(0,0,0,0.55); }
-        video { display:none; }
-        canvas { display:block; width:100%; height:100%; image-rendering:pixelated; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#141417">
+<title>像素相机 · DV-301</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23222226'/%3E%3Crect x='6' y='9' width='20' height='14' rx='3' fill='%23e9b44c'/%3E%3Ccircle cx='16' cy='16' r='4.5' fill='%23222226'/%3E%3C/svg%3E">
+<style>
+:root{
+    --ink:#e9e7e2;
+    --amber:#e9b44c;
+    --amber-soft:rgba(233,180,76,.9);
+    --line:rgba(255,255,255,.075);
+    --etch:#777783;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+    background:radial-gradient(120% 80% at 50% -10%, #26262c 0%, #141417 48%, #0b0b0d 100%);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,'PingFang SC','Microsoft YaHei',sans-serif;
+    min-height:100dvh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:16px 14px calc(16px + env(safe-area-inset-bottom));
+    gap:10px;
+    user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;
+    overflow-x:hidden;
+}
 
-        /* 录制专用 Canvas（隐藏） */
-        #recordCanvas { display:none; }
+/* ================= 机身 ================= */
+.dv{
+    width:100%;max-width:372px;position:relative;
+    background:linear-gradient(180deg,#57575f 0%,#3d3d44 15%,#333339 52%,#29292e 100%);
+    border-radius:20px 20px 26px 26px;
+    padding:13px 12px 15px;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.12),
+        inset 0 -1px 0 rgba(0,0,0,.6),
+        0 26px 54px -12px rgba(0,0,0,.85),
+        0 2px 0 rgba(255,255,255,.03);
+}
+/* 侧边磨砂握把 */
+.dv::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;
+    background:
+        repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px) left center/6px 62% no-repeat,
+        repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px) right center/6px 62% no-repeat;
+    opacity:.7;
+}
+.dv::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 26%,transparent 74%,rgba(255,255,255,.03) 100%);
+}
+.screw{
+    position:absolute;width:6px;height:6px;border-radius:50%;z-index:3;
+    background:radial-gradient(circle at 35% 30%,#6a6a72,#191919 72%);
+    box-shadow:inset 0 1px 1px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.06);
+}
+.screw.tl{top:9px;left:10px} .screw.br{bottom:9px;right:10px}
 
-        .placeholder { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#444; font-size:13px; pointer-events:none; z-index:1; }
+.dv-head{display:flex;align-items:center;justify-content:space-between;padding:0 3px 8px;position:relative;z-index:2}
+.brand{font:700 10px/1 'Arial Narrow',Arial,sans-serif;letter-spacing:.34em;color:#d2d2da}
+.brand em{font-style:normal;color:var(--amber)}
+.model{font:700 9px/1 Arial,sans-serif;letter-spacing:.22em;color:#71717a;margin-left:auto;margin-right:9px}
+.pwr{width:5px;height:5px;border-radius:50%;background:#6ee27a;box-shadow:0 0 7px #4fd45e;opacity:.9}
 
-        /* 扫描线 */
-        .scanlines { position:absolute; inset:0; pointer-events:none; z-index:4; display:none;
-            background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 2px); }
-        .scanlines.active { display:block; }
+/* ================= 取景器 ================= */
+.lcd{
+    position:relative;background:#0a0a0c;border-radius:9px;padding:5px;margin-bottom:10px;z-index:2;
+    box-shadow:0 0 0 1px #16161a, inset 0 2px 14px rgba(0,0,0,.95), 0 1px 0 rgba(255,255,255,.055);
+    transition:box-shadow .25s;
+}
+.lcd.rec{box-shadow:0 0 0 1px #16161a, inset 0 2px 14px rgba(0,0,0,.95), 0 0 0 2px rgba(226,73,61,.55), 0 0 18px rgba(226,73,61,.2)}
+.lcd-inner{
+    position:relative;aspect-ratio:4/3;border-radius:4px;overflow:hidden;background:#050506;
+    touch-action:none;cursor:crosshair;
+}
+#screen{display:block;width:100%;height:100%;image-rendering:pixelated}
+.lcd-glare{
+    position:absolute;inset:5px;border-radius:4px;pointer-events:none;z-index:6;
+    background:linear-gradient(118deg,rgba(255,255,255,.09) 0%,rgba(255,255,255,.025) 16%,transparent 34%,transparent 100%);
+    mix-blend-mode:screen;
+}
 
-        /* REC 灯 */
-        .dv-rec-light { position:absolute; top:10px; right:10px; display:flex; align-items:center; gap:4px; z-index:5; pointer-events:none; }
-        .dv-rec-dot { width:7px; height:7px; border-radius:50%; background:#c0392b; box-shadow:0 0 8px #c0392b; opacity:0; transition:opacity 0.2s; }
-        .dv-rec-dot.active { opacity:1; animation:recPulse 0.9s infinite; }
-        .dv-rec-text { font-size:7px; color:#ff5555; font-weight:bold; letter-spacing:2px; font-family:Arial, sans-serif; opacity:0; transition:opacity 0.2s; }
-        .dv-rec-text.active { opacity:1; }
-        @keyframes recPulse { 0%,100%{ opacity:1; } 50%{ opacity:0.12; } }
+.osd{position:absolute;inset:0;pointer-events:none;z-index:5;font-family:'Courier New',monospace}
+.osd-rec{
+    position:absolute;top:8px;left:9px;display:flex;align-items:center;gap:5px;
+    font-size:9px;font-weight:700;letter-spacing:1.5px;color:#ff5a4d;
+    text-shadow:0 0 6px rgba(0,0,0,.9);opacity:0;transition:opacity .18s;
+}
+.osd-rec.on{opacity:1}
+.osd-rec i{width:6px;height:6px;border-radius:50%;background:#ff4b3e;box-shadow:0 0 8px #ff4b3e;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.15}}
+.osd-info{
+    position:absolute;top:8px;right:9px;display:flex;align-items:center;gap:6px;
+    font-size:9px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.82);
+    text-shadow:0 0 5px rgba(0,0,0,.95);
+}
+.osd-info span{background:rgba(0,0,0,.28);padding:1px 5px;border-radius:2px}
+.osd-mode{
+    position:absolute;bottom:7px;right:9px;font-size:8px;font-weight:700;letter-spacing:1.6px;
+    color:rgba(255,255,255,.72);text-shadow:0 0 5px rgba(0,0,0,.95);
+    background:rgba(0,0,0,.26);padding:1px 5px;border-radius:2px;
+}
+.focus{
+    position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:3px;
+    border:1.5px solid var(--amber-soft);box-shadow:0 0 12px rgba(233,180,76,.4);
+    opacity:0;pointer-events:none;
+}
+.focus.go{animation:focusPop .8s ease-out forwards}
+@keyframes focusPop{0%{opacity:1;transform:scale(1.4)}70%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 
-        /* 日期 */
-        .dv-date { position:absolute; bottom:10px; left:10px; font-size:12px; color:#fff; font-family:'Courier New', monospace; font-weight:bold; text-shadow:0 0 4px #000; z-index:5; pointer-events:none; }
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:7}
+.flash.go{animation:flashHit .3s ease-out}
+@keyframes flashHit{0%{opacity:.92}100%{opacity:0}}
 
-        .dv-zoom-row { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; }
-        .zoom-btn { width:44px; height:30px; border-radius:6px; border:none; cursor:pointer; font-size:16px; font-weight:bold; color:#ccc; background:linear-gradient(180deg, #585860 0%, #3c3c42 100%); box-shadow:0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07); transition:all 0.08s; display:flex; align-items:center; justify-content:center; font-family:Arial, sans-serif; user-select:none; -webkit-user-select:none; touch-action:none; }
-        .zoom-btn:active { box-shadow:0 1px 2px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.4); transform:translateY(2px); background:linear-gradient(180deg, #3c3c42 0%, #585860 100%); }
-        .zoom-label { font-size:12px; color:#d4af37; font-weight:bold; min-width:60px; text-align:center; background:#1e1e24; padding:6px 10px; border-radius:12px; border:1px solid #35353a; }
+/* 空状态 */
+.empty{
+    position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:9px;padding:16px;text-align:center;
+    background:radial-gradient(circle at 50% 45%,#131317,#08080a 70%);
+}
+.empty svg{width:28px;height:28px;color:#4a4a55;stroke-width:1.4}
+.empty.loading svg{animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.35}50%{opacity:.85}}
+.empty p{font-size:11.5px;line-height:1.6;color:#8a8a95;max-width:225px}
+.empty-actions{display:flex;gap:8px;margin-top:2px}
+.empty-actions[hidden]{display:none}
 
-        .dv-filter-row { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:8px; padding:0 20px; }
-        .dv-filter-btn { width:36px; height:36px; border-radius:6px; border:none; cursor:pointer; font-size:16px; font-weight:bold; color:#ccc; background:linear-gradient(180deg, #585860 0%, #3c3c42 100%); box-shadow:0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07); transition:all 0.08s; display:flex; align-items:center; justify-content:center; font-family:Arial, sans-serif; }
-        .dv-filter-btn:active { box-shadow:0 1px 2px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.4); transform:translateY(2px); background:linear-gradient(180deg, #3c3c42 0%, #585860 100%); }
-        .dv-filter-name { font-size:13px; color:#d4af37; letter-spacing:3px; font-weight:bold; min-width:50px; text-align:center; padding:6px 14px; background:#1e1e24; border-radius:20px; border:1px solid #35353a; }
-        .dv-btn-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-bottom:8px; }
-        .dv-btn { height:40px; border-radius:6px; border:none; cursor:pointer; font-family:'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; font-size:13px; font-weight:bold; letter-spacing:1px; color:#ccc; background:linear-gradient(180deg, #585860 0%, #3c3c42 100%); box-shadow:0 3px 6px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07); transition:all 0.08s; display:flex; align-items:center; justify-content:center; }
-        .dv-btn:active { box-shadow:0 1px 2px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.4); transform:translateY(2px); background:linear-gradient(180deg, #3c3c42 0%, #585860 100%); }
-        .dv-btn.rec { background:linear-gradient(180deg, #d94040 0%, #a02020 100%); color:#fff; box-shadow:0 3px 8px rgba(192,57,43,0.5), inset 0 1px 0 rgba(255,255,255,0.15); letter-spacing:2px; }
-        .dv-btn.rec:active { background:linear-gradient(180deg, #a02020 0%, #d94040 100%); box-shadow:0 1px 3px rgba(192,57,43,0.3), inset 0 2px 4px rgba(0,0,0,0.3); }
-        .dv-btn.rec.recording { animation:recPulse 1s infinite; }
-        .dv-btn.toggle { gap:5px; } .dv-btn.toggle .sw-dot { width:8px; height:4px; border-radius:2px; background:#555; transition:all 0.2s; }
-        .dv-btn.toggle.active { background:linear-gradient(180deg, #6a3d80 0%, #4a2060 100%); color:#e0c0ff; box-shadow:0 3px 8px rgba(120,60,160,0.35); }
-        .dv-btn.toggle.active .sw-dot { background:#c090ff; box-shadow:0 0 6px #c090ff; }
+/* ================= 通用小按钮 ================= */
+.mini{
+    border:1px solid var(--line);background:rgba(255,255,255,.055);color:#c9c9d2;
+    padding:6px 13px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;
+    font-family:inherit;transition:.14s;
+}
+.mini:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
 
-        .dv-bottom-row { display:flex; gap:8px; align-items:stretch; }
-        .dv-grip { flex:1; height:28px; background:repeating-linear-gradient(90deg, #2a2a30 0px, #2a2a30 4px, #33333a 4px, #33333a 8px); border-radius:4px; border:1px solid #3a3a3e; opacity:0.45; }
-        .flash-overlay { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:10; border-radius:3px; transition:opacity 0.08s; }
-        .flash-overlay.fire { opacity:0.9; }
-        input[type="file"] { display:none; }
-        .warning, .info { display:none; }
-    </style>
+/* ================= 控制面板 ================= */
+.deck{
+    position:relative;z-index:2;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:9px 10px 8px;margin-bottom:13px;border-radius:12px;
+    background:linear-gradient(180deg,#232329 0%,#1b1b20 55%,#202026 100%);
+    box-shadow:
+        inset 0 2px 7px rgba(0,0,0,.8),
+        inset 0 -1px 0 rgba(255,255,255,.06),
+        0 1px 0 rgba(255,255,255,.08);
+}
+.mod{
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    gap:6px;height:90px;
+}
+.etched{
+    font-size:8px;letter-spacing:.15em;color:var(--etch);
+    text-shadow:0 1px 0 rgba(0,0,0,.8);
+}
+.etched b{color:#cfcfd9;font-weight:700;letter-spacing:.04em}
+
+/* --- 滤镜滚轮 --- */
+.drum{
+    position:relative;width:112px;height:74px;border-radius:9px;overflow:hidden;
+    background:linear-gradient(180deg,#0c0c10,#15151a);
+    box-shadow:inset 0 3px 9px rgba(0,0,0,.95),inset 0 -1px 0 rgba(255,255,255,.05),0 1px 0 rgba(255,255,255,.05);
+    touch-action:none;cursor:grab;
+}
+.drum-track{position:absolute;left:0;top:0;width:100%;will-change:transform}
+.drum-item{
+    display:block;width:100%;height:24px;line-height:24px;text-align:center;
+    border:none;background:none;font-family:inherit;font-size:11px;font-weight:700;
+    letter-spacing:.12em;color:#4c4c57;cursor:pointer;transition:color .15s;
+}
+.drum-item.on{color:#ffd88f;text-shadow:0 0 12px rgba(233,180,76,.55)}
+.drum-item.ghost{cursor:default}
+.drum-win{
+    position:absolute;left:4px;right:4px;top:24px;height:24px;border-radius:5px;pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(233,180,76,.28),inset 0 0 14px rgba(233,180,76,.10);
+}
+.drum-shade{
+    position:absolute;inset:0;pointer-events:none;border-radius:9px;
+    background:linear-gradient(180deg,rgba(9,9,12,.92) 0%,rgba(9,9,12,0) 32%,rgba(9,9,12,0) 68%,rgba(9,9,12,.92) 100%);
+}
+
+/* --- 变焦摇杆 --- */
+.rocker{
+    position:relative;width:58px;height:74px;border-radius:12px;padding:3px;
+    background:linear-gradient(180deg,#17171c,#0e0e12);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06);
+    display:flex;flex-direction:column;gap:2px;
+    transition:transform .1s ease;
+}
+.rocker.tilt-t{transform:perspective(90px) rotateX(5deg)}
+.rocker.tilt-w{transform:perspective(90px) rotateX(-5deg)}
+.rock-half{
+    flex:1;border:none;cursor:pointer;font-family:'Arial Narrow',Arial,sans-serif;
+    font-size:11px;font-weight:800;letter-spacing:.08em;color:#9c9caa;
+    background:linear-gradient(180deg,#4c4c57,#33333b);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 3px rgba(0,0,0,.55),0 2px 0 #0d0d10;
+    transition:.07s;display:flex;align-items:center;justify-content:center;
+    touch-action:none;
+}
+.rock-half.t{border-radius:10px 10px 3px 3px}
+.rock-half.w{border-radius:3px 3px 10px 10px}
+.rock-half.pressed{
+    color:#ffd88f;
+    background:linear-gradient(180deg,#33333b,#4c4c57);
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* --- CRT 竖长方形按键（自锁式，开启时按下去并亮灯） --- */
+.toggle{
+    position:relative;width:36px;height:74px;border-radius:9px;border:none;cursor:pointer;padding:0;
+    background:linear-gradient(180deg,#53535d 0%,#3b3b44 58%,#2d2d34 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.18),
+        inset 0 -2px 3px rgba(0,0,0,.5),
+        0 3px 0 #101014,
+        0 6px 10px rgba(0,0,0,.45);
+    transition:transform .08s ease,box-shadow .08s ease,background .18s;
+    touch-action:manipulation;
+}
+.toggle::after{
+    content:"";position:absolute;left:9px;right:9px;bottom:11px;height:15px;border-radius:2px;
+    background:repeating-linear-gradient(180deg,rgba(255,255,255,.11) 0 1px,transparent 1px 4px);
+    pointer-events:none;
+}
+.toggle .led{
+    position:absolute;left:50%;top:11px;width:9px;height:9px;margin-left:-4.5px;border-radius:50%;
+    background:radial-gradient(circle at 40% 35%,#3d3d45,#1a1a20);
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.07);
+    transition:.18s;
+}
+.toggle[aria-checked="true"]{
+    transform:translateY(3px);
+    background:linear-gradient(180deg,#45503f 0%,#373d33 58%,#2b2f28 100%);
+    box-shadow:
+        inset 0 2px 5px rgba(0,0,0,.6),
+        inset 0 -1px 0 rgba(255,255,255,.07),
+        0 0 0 #101014,
+        0 2px 5px rgba(0,0,0,.42);
+}
+.toggle[aria-checked="true"] .led{
+    background:radial-gradient(circle at 40% 35%,#eaffea,#6ee27a 52%,#2f9c3c);
+    box-shadow:0 0 9px rgba(110,226,122,.85),0 0 2px rgba(255,255,255,.9);
+}
+.toggle:active{transform:translateY(5px)}
+
+/* --- 侧边小键堆 --- */
+.stack{display:flex;flex-direction:column;gap:8px}
+.key{
+    width:44px;height:33px;border-radius:8px;border:none;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:linear-gradient(180deg,#4f4f59,#33333b);color:#b9b9c5;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -2px 3px rgba(0,0,0,.5),0 3px 0 #101014,0 5px 8px rgba(0,0,0,.4);
+    transition:.07s;font-family:inherit;
+}
+.key svg{display:block;width:12px;height:12px;stroke-width:1.9}
+.key i{font-style:normal;font-size:7px;letter-spacing:.08em;color:#8b8b97;line-height:1}
+.key:active{
+    transform:translateY(3px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 2px 5px rgba(0,0,0,.6),0 1px 0 #101014,0 2px 4px rgba(0,0,0,.4);
+}
+.key:disabled{opacity:.35;pointer-events:none}
+
+/* ================= 圆形按键 ================= */
+.pad{display:flex;align-items:flex-start;justify-content:center;gap:28px;position:relative;z-index:2}
+.col{display:flex;flex-direction:column;align-items:center;gap:7px}
+.cap{font-size:8px;letter-spacing:.14em;color:#7e7e8a;text-shadow:0 1px 0 rgba(0,0,0,.75)}
+
+.dial{
+    position:relative;border:none;border-radius:50%;cursor:pointer;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;color:#dcdce6;
+    background:radial-gradient(circle at 36% 28%,#7a7a85 0%,#4f4f59 42%,#2c2c33 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.2),
+        inset 0 -3px 7px rgba(0,0,0,.55),
+        0 5px 0 #141418,
+        0 9px 16px rgba(0,0,0,.55);
+    transition:transform .07s ease,box-shadow .07s ease;
+    touch-action:manipulation;
+}
+.dial::before{
+    content:"";position:absolute;inset:5px;border-radius:50%;pointer-events:none;
+    background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.07) 0deg 2.5deg,rgba(0,0,0,.06) 2.5deg 5deg);
+    -webkit-mask:radial-gradient(circle,transparent 50%,#000 72%);
+            mask:radial-gradient(circle,transparent 50%,#000 72%);
+}
+.dial.m{width:56px;height:56px}
+.dial.xl{width:68px;height:68px}
+.dial:active{
+    transform:translateY(4px);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.12),
+        inset 0 -2px 5px rgba(0,0,0,.6),
+        0 1px 0 #141418,
+        0 3px 8px rgba(0,0,0,.5);
+}
+.dial svg{width:16px;height:16px;stroke-width:1.9;position:relative;z-index:1}
+
+.dial.shutter{
+    background:radial-gradient(circle at 36% 28%,#fdfbf3 0%,#ded8c7 45%,#a9a18f 100%);color:#2a2822;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.95),
+        inset 0 -3px 7px rgba(0,0,0,.22),
+        0 5px 0 #6d6657,
+        0 9px 16px rgba(0,0,0,.55);
+}
+.dial.shutter:active{
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -2px 5px rgba(0,0,0,.28),0 1px 0 #6d6657,0 3px 8px rgba(0,0,0,.5);
+}
+.dial.shutter .ring{
+    width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(40,36,28,.35);
+    box-shadow:0 1px 0 rgba(255,255,255,.7);position:relative;z-index:1;
+}
+
+.dial.rec{
+    background:radial-gradient(circle at 36% 28%,#f2685c 0%,#ca382e 45%,#8c1e17 100%);color:#fff;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.32),
+        inset 0 -3px 7px rgba(0,0,0,.45),
+        0 5px 0 #5d1310,
+        0 9px 16px rgba(0,0,0,.55);
+}
+.dial.rec:active{
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 -2px 5px rgba(0,0,0,.5),0 1px 0 #5d1310,0 3px 8px rgba(0,0,0,.5);
+}
+.rec-dot{
+    width:16px;height:16px;border-radius:50%;background:#fff;position:relative;z-index:1;
+    box-shadow:0 0 10px rgba(255,255,255,.55);
+    transition:border-radius .16s cubic-bezier(.3,1.4,.5,1),transform .16s;
+}
+.dial.rec.on .rec-dot{border-radius:2px;transform:scale(.78)}
+.dial.rec.on{animation:recGlow 1.15s ease-in-out infinite}
+@keyframes recGlow{
+    0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -3px 7px rgba(0,0,0,.45),0 5px 0 #5d1310,0 9px 16px rgba(0,0,0,.55),0 0 0 0 rgba(226,73,61,.45)}
+    50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.32),inset 0 -3px 7px rgba(0,0,0,.45),0 5px 0 #5d1310,0 9px 16px rgba(0,0,0,.55),0 0 0 7px rgba(226,73,61,0)}
+}
+.dial:disabled{opacity:.35;pointer-events:none}
+
+.hint{font-size:9.5px;color:#6e6e7a;letter-spacing:.35px;text-align:center;padding:0 8px;line-height:1.7}
+input[type=file]{display:none}
+video#video{position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* ================= Toast ================= */
+.toast{
+    position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translate(-50%,14px);
+    background:rgba(22,22,26,.94);border:1px solid rgba(255,255,255,.1);color:#e6e6ee;
+    font-size:11.5px;padding:9px 16px;border-radius:999px;z-index:200;
+    opacity:0;pointer-events:none;transition:.22s cubic-bezier(.2,.9,.3,1);
+    box-shadow:0 10px 26px rgba(0,0,0,.55);white-space:nowrap;max-width:92vw;
+    overflow:hidden;text-overflow:ellipsis;
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:359px){
+    .dv{padding:11px 9px 13px}
+    .deck{gap:6px;padding:8px 7px 7px}
+    .drum{width:96px}
+    .rocker{width:52px}
+    .pad{gap:20px}
+    .dial.xl{width:62px;height:62px}
+    .dial.m{width:52px;height:52px}
+}
+@media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001s!important;transition-duration:.001s!important}
+}
+</style>
 </head>
 <body>
-    <div class="dv-body">
-        <div class="dv-screw tl"></div><div class="dv-screw tr"></div>
-        <div class="dv-screw bl"></div><div class="dv-screw br"></div>
-        <div class="dv-top-bar">
-            <span class="dv-model">PIXELCAM</span>
-            <span class="dv-badge">DV-301</span>
-        </div>
-        <div class="dv-viewfinder">
-            <div class="dv-viewfinder-inner">
-                <video id="video" autoplay playsinline muted></video>
-                <canvas id="outputCanvas"></canvas>
-                <!-- 隐藏的录制 Canvas -->
-                <canvas id="recordCanvas" width="500" height="500"></canvas>
-                <div class="scanlines" id="scanlinesOverlay"></div>
-                <div class="flash-overlay" id="flash"></div>
-                <div class="placeholder" id="placeholder">按「拍照」启动</div>
-                <div class="dv-rec-light">
-                    <div class="dv-rec-dot" id="recDot"></div>
-                    <span class="dv-rec-text" id="recText">REC</span>
+
+<div class="dv" id="dv">
+    <div class="screw tl"></div><div class="screw br"></div>
+
+    <div class="dv-head">
+        <span class="brand">PIXEL<em>CAM</em></span>
+        <span class="model">DV-301</span>
+        <span class="pwr"></span>
+    </div>
+
+    <div class="lcd" id="lcdWrap">
+        <div class="lcd-inner" id="lcdInner">
+            <canvas id="screen"></canvas>
+            <div class="osd">
+                <div class="osd-rec" id="osdRec"><i></i>REC <span id="osdRecTime">00:00</span></div>
+                <div class="osd-info"><span id="osdZoom">W 1.0x</span></div>
+                <div class="osd-mode" id="osdMode">CAM</div>
+                <div class="focus" id="focusBox"></div>
+                <div class="flash" id="flashEl"></div>
+            </div>
+            <div class="empty loading" id="empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7l1.2-1.7A1.5 1.5 0 0 1 9.6 3.6h4.8c.5 0 .9.25 1.2.7L16.8 6h1.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5z"/>
+                    <circle cx="12" cy="13" r="3.6"/>
+                </svg>
+                <p id="emptyMsg">正在开启摄像头…</p>
+                <div class="empty-actions" id="emptyActions" hidden>
+                    <button class="mini" id="retryBtn">重试</button>
+                    <button class="mini" id="emptyUploadBtn">上传照片</button>
                 </div>
-                <div class="dv-date" id="dateLabel">----</div>
             </div>
         </div>
-
-        <div class="dv-zoom-row">
-            <button class="zoom-btn" id="zoomW">◀W</button>
-            <span class="zoom-label" id="zoomLabel">1.0x</span>
-            <button class="zoom-btn" id="zoomT">T▶</button>
-        </div>
-
-        <div class="dv-filter-row">
-            <button class="dv-filter-btn" id="filterPrev">◀</button>
-            <span class="dv-filter-name" id="filterLabel">原色</span>
-            <button class="dv-filter-btn" id="filterNext">▶</button>
-        </div>
-        <div class="dv-btn-grid">
-            <button class="dv-btn" id="uploadBtn">上传</button>
-            <button class="dv-btn" id="captureBtn">拍照</button>
-            <button class="dv-btn" id="switchBtn">切换</button>
-            <button class="dv-btn" id="freezeBtn">冻结</button>
-            <button class="dv-btn toggle" id="dvBtn">DV<span class="sw-dot"></span></button>
-            <button class="dv-btn rec" id="recordBtn">录制</button>
-        </div>
-        <div class="dv-bottom-row"><div class="dv-grip"></div></div>
+        <div class="lcd-glare"></div>
     </div>
-    <div class="warning" id="warning"></div>
-    <div class="info"></div>
 
-    <input type="file" id="fileInput" accept="image/*">
+    <!-- ======== 控制面板 ======== -->
+    <div class="deck">
 
-    <script>
-    (function() {
-        // DOM
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('outputCanvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const recordCanvas = document.getElementById('recordCanvas');
-        const recordCtx = recordCanvas.getContext('2d');
-        const placeholder = document.getElementById('placeholder');
-        const flash = document.getElementById('flash');
-        const scanlinesOverlay = document.getElementById('scanlinesOverlay');
-        const recDot = document.getElementById('recDot');
-        const recText = document.getElementById('recText');
-        const dateLabel = document.getElementById('dateLabel');
-        const filterLabel = document.getElementById('filterLabel');
-        const warningEl = document.getElementById('warning');
-        const zoomLabel = document.getElementById('zoomLabel');
-        const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const captureBtn = document.getElementById('captureBtn');
-        const switchBtn = document.getElementById('switchBtn');
-        const freezeBtn = document.getElementById('freezeBtn');
-        const dvBtn = document.getElementById('dvBtn');
-        const recordBtn = document.getElementById('recordBtn');
-        const filterPrev = document.getElementById('filterPrev');
-        const filterNext = document.getElementById('filterNext');
-        const zoomW = document.getElementById('zoomW');
-        const zoomT = document.getElementById('zoomT');
+        <div class="mod">
+            <div class="drum" id="filterDrum" role="listbox" aria-label="滤镜">
+                <div class="drum-track" id="drumTrack"></div>
+                <div class="drum-win"></div>
+                <div class="drum-shade"></div>
+            </div>
+            <span class="etched">滤镜 <b id="filterNum">1/5</b></span>
+        </div>
 
-        // 常量
-        const FILTERS = ['none', 'red', 'blue', 'bw'];
-        const FILTER_CN = { none:'原色', red:'红黑', blue:'蓝黑', bw:'黑白' };
-        const TARGET_BLOCKS = 500;
-        const BASE_BLOCK = 1;
-        const MAX_ZOOM = 4;
-        const ZOOM_SPEED = 1.2;
+        <div class="stack">
+            <button class="key" id="flipBtn" aria-label="切换摄像头">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 9.5h13.5l-3.2-3.2M20 14.5H6.5l3.2 3.2"/>
+                </svg><i id="flipLabel">翻转</i>
+            </button>
+            <button class="key" id="pixBtn" aria-label="像素档位">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/>
+                    <rect x="3.5" y="14.5" width="6" height="6" rx="1"/><rect x="14.5" y="14.5" width="6" height="6" rx="1"/>
+                </svg><i id="pixLabel">中</i>
+            </button>
+        </div>
 
-        let zoomLevel = 1;
-        let currentFilter = 'none';
-        let filterIdx = 0;
-        let frozen = false, frozenFrame = null;
-        let facingMode = 'environment';
-        let videoReady = false;
-        let thresholdVal = 80, colorDepth = 220;
-        let uploadedImage = null;
-        let mode = 'camera';
-        let recording = false, mediaRecorder = null, recordedChunks = [];
-        let dvEnabled = false;
-        let audioStream = null;
+        <div class="mod">
+            <button class="toggle" id="crtBtn" role="switch" aria-checked="true" aria-label="CRT 效果">
+                <span class="led"></span>
+            </button>
+            <span class="etched">CRT</span>
+        </div>
 
-        let stream = null;
-        let animationId = null;
-        let zoomDir = 0;
-        let lastZoomTime = performance.now();
+        <div class="mod">
+            <div class="rocker" id="zoomRocker">
+                <button class="rock-half t" data-dir="1" aria-label="变焦拉近">T</button>
+                <button class="rock-half w" data-dir="-1" aria-label="变焦拉远">W</button>
+            </div>
+            <span class="etched">变焦 <b id="zoomVal">1.0×</b></span>
+        </div>
+    </div>
 
-        const offCropCanvas = document.createElement('canvas');
-        const offCropCtx = offCropCanvas.getContext('2d');
-        const offBlockCanvas = document.createElement('canvas');
-        const offBlockCtx = offBlockCanvas.getContext('2d');
+    <!-- ======== 实体按键 ======== -->
+    <div class="pad">
+        <div class="col">
+            <button class="dial m" id="uploadBtn" aria-label="上传照片">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/>
+                </svg>
+            </button>
+            <span class="cap">上传</span>
+        </div>
 
-        // 更新日期
-        function updateDateHTML() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
-            dateLabel.textContent = `${y}-${m}-${d}`;
+        <div class="col">
+            <button class="dial xl shutter" id="shutterBtn" aria-label="拍照">
+                <span class="ring"></span>
+            </button>
+            <span class="cap">拍照</span>
+        </div>
+
+        <div class="col">
+            <button class="dial m rec" id="recBtn" aria-label="录像"><span class="rec-dot"></span></button>
+            <span class="cap" id="recCap">录像</span>
+        </div>
+    </div>
+
+    <input type="file" accept="image/*" id="fileInput">
+</div>
+
+<div class="hint">按住 T / W 连续变焦 · 拨动滚轮换滤镜 · 双指缩放取景器</div>
+
+<div class="toast" id="toast"></div>
+
+<video id="video" autoplay muted playsinline></video>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= 引用 ================= */
+const $ = function(id){ return document.getElementById(id); };
+
+const dvEl        = $('dv');
+const video       = $('video');
+const screenCv    = $('screen');
+const screenCtx   = screenCv.getContext('2d');
+const lcdWrap     = $('lcdWrap');
+const lcdInner    = $('lcdInner');
+const emptyBox    = $('empty');
+const emptyMsg    = $('emptyMsg');
+const emptyActions= $('emptyActions');
+const osdRec      = $('osdRec');
+const osdRecTime  = $('osdRecTime');
+const osdZoom     = $('osdZoom');
+const osdMode     = $('osdMode');
+const focusBox    = $('focusBox');
+const flashEl     = $('flashEl');
+
+const zoomRocker  = $('zoomRocker');
+const zoomVal     = $('zoomVal');
+const drumEl      = $('filterDrum');
+const drumTrack   = $('drumTrack');
+const filterNum   = $('filterNum');
+
+const uploadBtn   = $('uploadBtn');
+const shutterBtn  = $('shutterBtn');
+const recBtn      = $('recBtn');
+const recCap      = $('recCap');
+const fileInput   = $('fileInput');
+
+const flipBtn     = $('flipBtn');
+const flipLabel   = $('flipLabel');
+const crtBtn      = $('crtBtn');
+const pixBtn      = $('pixBtn');
+const pixLabel    = $('pixLabel');
+
+const toastEl     = $('toast');
+
+/* ================= 常量 ================= */
+const ZOOM_MIN = 1, ZOOM_MAX = 3, ZOOM_STEP = 0.2;
+const MAX_REC_MS = 60000;
+const EXPORT_W = 1152;
+const DRUM_H = 24;
+
+const FILTERS = [
+    { key:'original',   name:'原色' },
+    { key:'bw',         name:'黑白' },
+    { key:'sepia',      name:'复古' },
+    { key:'cool',       name:'冷调' },
+    { key:'silhouette', name:'剪影' }
+];
+
+const PIX_LEVELS = [
+    { name:'粗', w:144, h:108 },
+    { name:'中', w:192, h:144 },
+    { name:'细', w:288, h:216 }
+];
+
+/* ================= 状态 ================= */
+let PIX_W = PIX_LEVELS[1].w, PIX_H = PIX_LEVELS[1].h;
+let pixIndex = 1;
+let filterIndex = 0;
+
+let stream = null;
+let videoReady = false;
+let facing = 'environment';
+
+let mode = 'camera';
+let sourceImage = null;
+let hasFrame = false;
+let needsPixel = true;
+
+let zoom = 1, panX = 0, panY = 0;
+let currentFilter = 'original';
+let crtOn = true;
+
+let recording = false;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordMime = '';
+let recStartTs = 0;
+let recTimerId = 0;
+let capStream = null;
+let auxAudio = null;
+let zoomHoldId = 0;
+
+let toastTimer = 0;
+let audioCtx = null;
+let previewDirty = true;   // 取景器是否需要重绘
+
+/* ================= 离屏画布 ================= */
+const pixelCv = document.createElement('canvas');
+const pixelCtx = pixelCv.getContext('2d', { willReadFrequently:true });
+const recCv = document.createElement('canvas');
+const recCtx = recCv.getContext('2d');
+pixelCv.width = PIX_W; pixelCv.height = PIX_H;
+recCv.width = PIX_W * 4; recCv.height = PIX_H * 4;
+
+/* ================= 小工具 ================= */
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+
+function toast(msg, ms){
+    toastEl.textContent = msg;
+    toastEl.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('on'); }, ms || 1800);
+}
+
+function haptic(ms){
+    if (navigator.vibrate) { try { navigator.vibrate(ms); } catch(e){} }
+}
+
+let stampKey = -1, stampText = '';
+function dateStamp(){
+    const d = new Date();
+    // 时间戳只精确到分钟，按分钟缓存，避免每帧拼字符串
+    const key = Math.floor(d.getTime() / 60000);
+    if (key !== stampKey){
+        stampKey = key;
+        stampText = d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate())
+                  + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    }
+    return stampText;
+}
+
+function fileStamp(){
+    const d = new Date();
+    return '' + d.getFullYear() + pad2(d.getMonth()+1) + pad2(d.getDate())
+         + '_' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
+}
+
+/* ================= 机械声 ================= */
+function ac(){
+    if (!audioCtx){
+        const C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        audioCtx = new C();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+}
+
+function clickSound(freq, gain){
+    const c = ac();
+    if (!c) return;
+    try{
+        const t = c.currentTime;
+        const len = Math.floor(c.sampleRate * 0.018);
+        const buf = c.createBuffer(1, len, c.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++){
+            const k = i / len;
+            d[i] = (Math.random()*2 - 1) * Math.pow(1 - k, 16);
         }
-        setInterval(updateDateHTML, 1000);
-        updateDateHTML();
+        const src = c.createBufferSource();
+        src.buffer = buf;
+        const f = c.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.value = freq || 2400;
+        f.Q.value = 1.4;
+        const g = c.createGain();
+        g.gain.value = gain == null ? 0.16 : gain;
+        src.connect(f); f.connect(g); g.connect(c.destination);
+        src.start(t);
+    } catch(err){}
+}
 
-        // 变焦控制
-        function updateZoomDisplay() { zoomLabel.textContent = zoomLevel.toFixed(1) + 'x'; }
-        function setZoomDirection(dir) { zoomDir = dir; lastZoomTime = performance.now(); }
-        function updateZoomByTime(now) {
-            if (zoomDir === 0) return false;
-            const dt = (now - lastZoomTime) / 1000;
-            if (dt <= 0) return false;
-            const delta = ZOOM_SPEED * dt * (zoomDir > 0 ? 1 : -1);
-            let newZoom = zoomLevel + delta;
-            newZoom = Math.max(1, Math.min(MAX_ZOOM, newZoom));
-            if (newZoom !== zoomLevel) {
-                zoomLevel = newZoom;
-                updateZoomDisplay();
-                if (mode === 'upload' && uploadedImage) processImage();
-                lastZoomTime = now;
-                return true;
+function thunkSound(){
+    const c = ac();
+    if (!c) return;
+    try{
+        const t = c.currentTime;
+        const len = Math.floor(c.sampleRate * 0.06);
+        const buf = c.createBuffer(1, len, c.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++){
+            const k = i / len;
+            d[i] = (Math.random()*2 - 1) * Math.pow(1 - k, 9) + Math.sin(i * 0.08) * 0.4 * Math.pow(1-k, 12);
+        }
+        const src = c.createBufferSource();
+        src.buffer = buf;
+        const f = c.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.value = 900;
+        const g = c.createGain();
+        g.gain.value = 0.28;
+        src.connect(f); f.connect(g); g.connect(c.destination);
+        src.start(t);
+    } catch(err){}
+}
+
+function playShutter(){
+    const c = ac();
+    if (!c) return;
+    try{
+        const now = c.currentTime;
+        for (let k = 0; k < 2; k++){
+            const len = Math.floor(c.sampleRate * 0.05);
+            const buf = c.createBuffer(1, len, c.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++){
+                const t = i / len;
+                d[i] = (Math.random()*2 - 1) * Math.pow(1 - t, 5);
             }
-            return false;
+            const src = c.createBufferSource();
+            src.buffer = buf;
+            const g = c.createGain();
+            g.gain.value = k === 0 ? 0.34 : 0.2;
+            const f = c.createBiquadFilter();
+            f.type = 'bandpass';
+            f.frequency.value = k === 0 ? 1800 : 2800;
+            f.Q.value = 1.2;
+            src.connect(f); f.connect(g); g.connect(c.destination);
+            src.start(now + k * 0.055);
         }
-        zoomW.addEventListener('pointerdown', e => { e.preventDefault(); setZoomDirection(-1); });
-        zoomT.addEventListener('pointerdown', e => { e.preventDefault(); setZoomDirection(1); });
-        zoomW.addEventListener('pointerup', () => setZoomDirection(0));
-        zoomT.addEventListener('pointerup', () => setZoomDirection(0));
-        zoomW.addEventListener('pointerleave', () => setZoomDirection(0));
-        zoomT.addEventListener('pointerleave', () => setZoomDirection(0));
-        zoomW.addEventListener('pointercancel', () => setZoomDirection(0));
-        zoomT.addEventListener('pointercancel', () => setZoomDirection(0));
+    } catch(err){}
+}
 
-        // 滤镜
-        function updateFilterUI() { filterLabel.textContent = FILTER_CN[currentFilter]; }
-        function switchFilter(dir) {
-            filterIdx = (filterIdx + dir + FILTERS.length) % FILTERS.length;
-            currentFilter = FILTERS[filterIdx];
-            updateFilterUI();
-            if (mode === 'upload' && uploadedImage) processImage();
+/* 所有按键的统一机械反馈 */
+dvEl.addEventListener('pointerdown', function(e){
+    const b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    // 这些按键自己会发声，避免叠音
+    if (b.closest('.drum-item, .rock-half')) return;
+    if (b.id === 'shutterBtn' || b.id === 'recBtn') return;
+    clickSound(2600, 0.13);
+    haptic(6);
+}, true);
+
+/* ================= 画布尺寸 ================= */
+function sizeScreen(){
+    const rect = lcdInner.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (screenCv.width !== w || screenCv.height !== h){
+        screenCv.width = w;
+        screenCv.height = h;
+        previewDirty = true;
+    }
+}
+if (window.ResizeObserver){
+    new ResizeObserver(function(){ sizeScreen(); }).observe(lcdInner);
+} else {
+    window.addEventListener('resize', sizeScreen);
+}
+window.addEventListener('orientationchange', function(){ setTimeout(sizeScreen, 250); });
+
+/* ================= 滤镜 ================= */
+function applyFilter(d, name){
+    const n = d.length;
+    let i, r, g, b, l;
+
+    if (name === 'bw'){
+        for (i = 0; i < n; i += 4){
+            l = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+            l = (l - 128) * 1.16 + 128 + 4;
+            if (l < 0) l = 0; else if (l > 255) l = 255;
+            d[i] = d[i+1] = d[i+2] = l;
         }
-        filterPrev.addEventListener('click', () => switchFilter(-1));
-        filterNext.addEventListener('click', () => switchFilter(1));
-
-        function applyFilter(r, g, b) {
-            switch (currentFilter) {
-                case 'red':   return (r >= thresholdVal) ? [colorDepth,15,15] : [0,0,0];
-                case 'blue':  return (b >= thresholdVal) ? [15,15,colorDepth] : [0,0,0];
-                case 'bw': {
-                    const gray = 0.2126*r + 0.7152*g + 0.0722*b;
-                    const v = gray < thresholdVal ? 0 : 255;
-                    return [v,v,v];
-                }
-                default: {
-                    let rn = r/255, gn = g/255, bn = b/255;
-                    let mx = Math.max(rn,gn,bn), mn = Math.min(rn,gn,bn);
-                    let l = (mx+mn)/2, s = 0;
-                    if (mx !== mn) s = l>0.5 ? (mx-mn)/(2-mx-mn) : (mx-mn)/(mx+mn);
-                    s = Math.min(1, s*1.8);
-                    const cf = 1.5;
-                    let rr = Math.min(255, Math.max(0, ((rn-0.5)*cf+0.5)*255));
-                    let gg = Math.min(255, Math.max(0, ((gn-0.5)*cf+0.5)*255));
-                    let bb = Math.min(255, Math.max(0, ((bn-0.5)*cf+0.5)*255));
-                    let gray2 = 0.299*rr + 0.587*gg + 0.114*bb;
-                    rr = Math.min(255, Math.max(0, gray2 + (rr-gray2)*1.4));
-                    gg = Math.min(255, Math.max(0, gray2 + (gg-gray2)*1.4));
-                    bb = Math.min(255, Math.max(0, gray2 + (bb-gray2)*1.4));
-                    return [rr,gg,bb];
-                }
-            }
+    } else if (name === 'sepia'){
+        for (i = 0; i < n; i += 4){
+            r = d[i]; g = d[i+1]; b = d[i+2];
+            const nr = r*0.393 + g*0.769 + b*0.189;
+            const ng = r*0.349 + g*0.686 + b*0.168;
+            const nb = r*0.272 + g*0.534 + b*0.131;
+            d[i]   = nr > 255 ? 255 : nr;
+            d[i+1] = ng > 255 ? 255 : ng;
+            d[i+2] = nb > 255 ? 255 : nb;
         }
-
-        function applyDVEffect() {
-            const w = canvas.width, h = canvas.height;
-            const imgData = ctx.getImageData(0,0,w,h);
-            const d = imgData.data;
-            const offset = Math.max(2, Math.floor(BASE_BLOCK * 0.8));
-            const temp = new Uint8ClampedArray(d);
-            for (let y=0; y<h; y++) {
-                for (let x=0; x<w; x++) {
-                    const i = (y*w + x)*4;
-                    d[i]     = temp[(y*w + Math.max(0, x-offset))*4];
-                    d[i+2]   = temp[(y*w + Math.min(w-1, x+offset))*4 + 2];
-                    d[i+1]   = temp[i+1];
-                }
-            }
-            for (let i=0; i<d.length; i+=4) {
-                if (Math.random()<0.04) {
-                    const noise = Math.floor(Math.random()*80-40);
-                    d[i]   = Math.min(255, Math.max(0, d[i]+noise));
-                    d[i+1] = Math.min(255, Math.max(0, d[i+1]+noise));
-                    d[i+2] = Math.min(255, Math.max(0, d[i+2]+noise));
-                }
-            }
-            for (let i=0; i<d.length; i+=4) {
-                let r = d[i]*0.8, g = d[i+1]*0.8, b = d[i+2]*0.8;
-                const ct = 0.7;
-                r = 128 + (r-128)*ct;
-                g = 128 + (g-128)*ct;
-                b = 128 + (b-128)*ct;
-                d[i]   = Math.min(255, Math.max(0, r));
-                d[i+1] = Math.min(255, Math.max(0, g));
-                d[i+2] = Math.min(255, Math.max(0, b));
-            }
-            ctx.putImageData(imgData,0,0);
+    } else if (name === 'cool'){
+        for (i = 0; i < n; i += 4){
+            r = d[i] * 0.82;
+            b = d[i+2] * 1.16 + 10;
+            d[i]   = r;
+            d[i+2] = b > 255 ? 255 : b;
         }
-
-        // 核心像素化（结果输出到主 Canvas）
-        function processImageDataWithZoom(sourceCanvas, sourceCtx, sourceX, sourceY, sourceSize) {
-            const cropSize = sourceSize / zoomLevel;
-            const aSize = Math.ceil(cropSize);
-            offCropCanvas.width = aSize;
-            offCropCanvas.height = aSize;
-            offCropCtx.clearRect(0, 0, aSize, aSize);
-            offCropCtx.drawImage(
-                sourceCanvas,
-                sourceX + (sourceSize - cropSize) / 2,
-                sourceY + (sourceSize - cropSize) / 2,
-                cropSize, cropSize,
-                0, 0, aSize, aSize
-            );
-
-            offBlockCanvas.width = TARGET_BLOCKS;
-            offBlockCanvas.height = TARGET_BLOCKS;
-            offBlockCtx.imageSmoothingEnabled = true;
-            offBlockCtx.drawImage(offCropCanvas, 0, 0, aSize, aSize, 0, 0, TARGET_BLOCKS, TARGET_BLOCKS);
-
-            const blocksData = offBlockCtx.getImageData(0, 0, TARGET_BLOCKS, TARGET_BLOCKS).data;
-            const filteredData = ctx.createImageData(TARGET_BLOCKS, TARGET_BLOCKS);
-            for (let i = 0; i < blocksData.length; i += 4) {
-                const r = blocksData[i], g = blocksData[i+1], b = blocksData[i+2];
-                const [fr, fg, fb] = applyFilter(r, g, b);
-                filteredData.data[i]   = fr;
-                filteredData.data[i+1] = fg;
-                filteredData.data[i+2] = fb;
-                filteredData.data[i+3] = 255;
-            }
-
-            const blockDisplaySize = BASE_BLOCK / zoomLevel;
-            const outputSize = Math.round(TARGET_BLOCKS * blockDisplaySize);
-            canvas.width = outputSize;
-            canvas.height = outputSize;
-            ctx.clearRect(0, 0, outputSize, outputSize);
-            ctx.imageSmoothingEnabled = false;
-
-            const offTemp = document.createElement('canvas');
-            offTemp.width = TARGET_BLOCKS;
-            offTemp.height = TARGET_BLOCKS;
-            const offTempCtx = offTemp.getContext('2d');
-            offTempCtx.putImageData(filteredData, 0, 0);
-            ctx.drawImage(offTemp, 0, 0, TARGET_BLOCKS, TARGET_BLOCKS, 0, 0, outputSize, outputSize);
-
-            if (dvEnabled) applyDVEffect();
-            scanlinesOverlay.classList.toggle('active', dvEnabled);
-
-            // 如果正在录制，将主 Canvas 内容复制到固定尺寸的录制 Canvas
-            if (recording && recordCanvas) {
-                recordCtx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
-                recordCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, recordCanvas.width, recordCanvas.height);
-            }
+    } else if (name === 'silhouette'){
+        for (i = 0; i < n; i += 4){
+            l = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+            let v;
+            if (l <= 58) v = 0;
+            else if (l >= 112) v = 255;
+            else v = (l - 58) / 54 * 255;
+            d[i] = d[i+1] = d[i+2] = v;
         }
+    }
+}
 
-        function pixelateFrame() {
-            if (!stream || !videoReady || video.readyState < 2) return;
-            const vw = video.videoWidth || 640, vh = video.videoHeight || 640;
-            const raw = Math.min(vw, vh);
-            processImageDataWithZoom(video, null, 0, 0, raw);
+/* ================= 滤镜滚轮 ================= */
+function makeDrumItem(f, i, ghost){
+    const b = document.createElement('button');
+    b.className = 'drum-item' + (ghost ? ' ghost' : '');
+    b.type = 'button';
+    b.textContent = f.name;
+    b.dataset.index = ghost ? -1 : i;
+    if (ghost){
+        b.tabIndex = -1;
+        b.setAttribute('aria-hidden', 'true');
+    }
+    return b;
+}
+/* 首尾各补一条幽灵项，让滚轮在任何位置都填满三格，像真正的环形拨轮 */
+drumTrack.appendChild(makeDrumItem(FILTERS[FILTERS.length - 1], -1, true));
+FILTERS.forEach(function(f, i){ drumTrack.appendChild(makeDrumItem(f, i, false)); });
+drumTrack.appendChild(makeDrumItem(FILTERS[0], -1, true));
+const drumItems = Array.prototype.slice.call(drumTrack.children);
+
+function highlightDrum(idx){
+    for (let k = 1; k < drumItems.length - 1; k++){
+        drumItems[k].classList.toggle('on', k - 1 === idx);
+    }
+}
+
+function layoutDrum(animate){
+    drumTrack.style.transition = animate
+        ? 'transform .22s cubic-bezier(.22,1.1,.36,1)'
+        : 'none';
+    drumTrack.style.transform = 'translateY(' + (-filterIndex * DRUM_H) + 'px)';
+    highlightDrum(filterIndex);
+}
+
+function selectFilter(i, silent){
+    const ni = clamp(Math.round(i), 0, FILTERS.length - 1);
+    const changed = ni !== filterIndex;
+    filterIndex = ni;
+    currentFilter = FILTERS[ni].key;
+    filterNum.textContent = (ni + 1) + '/' + FILTERS.length;
+    layoutDrum(true);
+    needsPixel = true;
+    if (changed && !silent){ clickSound(2900, 0.15); haptic(7); }
+}
+
+let drumDrag = null;
+let drumMoved = false;
+
+drumEl.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    try { drumEl.setPointerCapture(e.pointerId); } catch(err){}
+    drumDrag = { y0:e.clientY, i0:filterIndex, hover:filterIndex };
+    drumMoved = false;
+    drumTrack.style.transition = 'none';
+});
+
+drumEl.addEventListener('pointermove', function(e){
+    if (!drumDrag) return;
+    const dy = e.clientY - drumDrag.y0;
+    if (Math.abs(dy) > 6) drumMoved = true;
+
+    // 限位 + 阻尼
+    let off = (-drumDrag.i0 * DRUM_H) + dy;
+    const minY = -(FILTERS.length - 1) * DRUM_H;
+    if (off > 0) off = off * 0.35;
+    if (off < minY) off = minY + (off - minY) * 0.35;
+    drumTrack.style.transform = 'translateY(' + off + 'px)';
+
+    const hover = clamp(Math.round(-off / DRUM_H), 0, FILTERS.length - 1);
+    if (hover !== drumDrag.hover){
+        drumDrag.hover = hover;
+        clickSound(3200, 0.09);
+        haptic(3);
+        highlightDrum(hover);
+        filterNum.textContent = (hover + 1) + '/' + FILTERS.length;
+    }
+});
+
+function endDrumDrag(e){
+    if (!drumDrag) return;
+    // pointercancel 时 clientY 不可信，直接停在当前高亮档
+    const idx = (e.type === 'pointercancel')
+        ? drumDrag.hover
+        : clamp(Math.round(drumDrag.i0 - (e.clientY - drumDrag.y0) / DRUM_H), 0, FILTERS.length - 1);
+    drumDrag = null;
+    selectFilter(idx);
+    setTimeout(function(){ drumMoved = false; }, 80);
+}
+drumEl.addEventListener('pointerup', endDrumDrag);
+drumEl.addEventListener('pointercancel', endDrumDrag);
+
+drumEl.addEventListener('click', function(e){
+    const it = e.target.closest('.drum-item');
+    if (!it || drumMoved) return;
+    const idx = parseInt(it.dataset.index, 10);
+    if (idx < 0) return;
+    selectFilter(idx);
+});
+
+drumEl.addEventListener('wheel', function(e){
+    e.preventDefault();
+    if (!drumDrag) selectFilter(filterIndex + (e.deltaY > 0 ? 1 : -1));
+}, { passive:false });
+
+/* ================= 变焦摇杆 ================= */
+function updateZoomUI(){
+    zoomVal.textContent = zoom.toFixed(1) + '×';
+    osdZoom.textContent = (zoom <= 1.001 ? 'W ' : 'T ') + zoom.toFixed(1) + 'x';
+}
+
+function setZoom(v, fromGesture){
+    const nz = clamp(Math.round(v * 100) / 100, ZOOM_MIN, ZOOM_MAX);
+    if (!fromGesture && Math.abs(nz - zoom) < 0.001) return;
+    zoom = nz;
+    if (zoom <= 1.001){ panX = 0; panY = 0; }
+    needsPixel = true;
+    updateZoomUI();
+}
+
+function zoomStep(dir){
+    setZoom(zoom + dir * 0.1, true);
+}
+
+function rockDown(e){
+    const btn = e.currentTarget;
+    const dir = parseInt(btn.dataset.dir, 10);
+    e.preventDefault();
+    btn.classList.add('pressed');
+    zoomRocker.classList.add(dir > 0 ? 'tilt-t' : 'tilt-w');
+    clickSound(dir > 0 ? 2100 : 1700, 0.18);
+    haptic(8);
+    zoomStep(dir);
+    clearInterval(zoomHoldId);
+    zoomHoldId = setInterval(function(){ zoomStep(dir); }, 90);
+}
+
+function rockUp(){
+    clearInterval(zoomHoldId);
+    zoomHoldId = 0;
+    zoomRocker.classList.remove('tilt-t', 'tilt-w');
+    const hs = zoomRocker.querySelectorAll('.rock-half');
+    for (let i = 0; i < hs.length; i++) hs[i].classList.remove('pressed');
+}
+
+const rockHalves = zoomRocker.querySelectorAll('.rock-half');
+for (let i = 0; i < rockHalves.length; i++){
+    const h = rockHalves[i];
+    h.addEventListener('pointerdown', rockDown);
+    h.addEventListener('pointerup', rockUp);
+    h.addEventListener('pointercancel', rockUp);
+    h.addEventListener('pointerleave', rockUp);
+    h.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+}
+window.addEventListener('blur', rockUp);
+
+/* ================= 取景器手势 ================= */
+const pointers = new Map();
+let drag = null, pinch = null;
+
+lcdInner.addEventListener('pointerdown', function(e){
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    try { lcdInner.setPointerCapture(e.pointerId); } catch(err){}
+    pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+
+    if (pointers.size === 1){
+        drag = { x:e.clientX, y:e.clientY, px:panX, py:panY, moved:0, t:performance.now() };
+        pinch = null;
+    } else if (pointers.size === 2){
+        const pts = Array.from(pointers.values());
+        pinch = { d: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1, z: zoom };
+        drag = null;
+    }
+});
+
+lcdInner.addEventListener('pointermove', function(e){
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+
+    if (pinch && pointers.size >= 2){
+        const pts = Array.from(pointers.values());
+        const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
+        setZoom(pinch.z * (d / pinch.d), true);
+    } else if (drag && pointers.size === 1){
+        const dx = e.clientX - drag.x;
+        const dy = e.clientY - drag.y;
+        drag.moved = Math.max(drag.moved, Math.hypot(dx, dy));
+        if (zoom > 1.001){
+            const rect = lcdInner.getBoundingClientRect();
+            const rx = Math.max(1, rect.width * (1 - 1 / zoom));
+            const ry = Math.max(1, rect.height * (1 - 1 / zoom));
+            panX = clamp(drag.px + (dx / rx) * 2, -1, 1);
+            panY = clamp(drag.py + (dy / ry) * 2, -1, 1);
+            needsPixel = true;
         }
+    }
+});
 
-        function processImage() {
-            if (!uploadedImage) return;
-            const iw = uploadedImage.width, ih = uploadedImage.height;
-            const raw = Math.min(iw, ih);
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = raw; tempCanvas.height = raw;
-            const sx = (iw - raw) / 2, sy = (ih - raw) / 2;
-            tempCtx.drawImage(uploadedImage, sx, sy, raw, raw, 0, 0, raw, raw);
-            processImageDataWithZoom(tempCanvas, tempCtx, 0, 0, raw);
+function endPointer(e){
+    if (!pointers.has(e.pointerId)) return;
+    const tapped = !!(drag && drag.moved < 8 && performance.now() - drag.t < 420);
+    pointers.delete(e.pointerId);
+
+    if (pointers.size === 0){
+        if (tapped) focusAt(e.clientX, e.clientY);
+        drag = null;
+        pinch = null;
+    } else if (pointers.size === 1){
+        const p = Array.from(pointers.values())[0];
+        drag = { x:p.x, y:p.y, px:panX, py:panY, moved:99, t:0 };
+        pinch = null;
+    }
+}
+lcdInner.addEventListener('pointerup', endPointer);
+lcdInner.addEventListener('pointercancel', endPointer);
+
+function focusAt(clientX, clientY){
+    const rect = lcdInner.getBoundingClientRect();
+    focusBox.style.left = (clientX - rect.left) + 'px';
+    focusBox.style.top  = (clientY - rect.top) + 'px';
+    focusBox.classList.remove('go');
+    void focusBox.offsetWidth;
+    focusBox.classList.add('go');
+    clickSound(3400, 0.07);
+}
+
+/* ================= 渲染 ================= */
+function getSource(){
+    if (mode === 'camera' && videoReady && video.videoWidth){
+        return { el: video, w: video.videoWidth, h: video.videoHeight };
+    }
+    if (mode === 'photo' && sourceImage){
+        return { el: sourceImage, w: sourceImage.naturalWidth, h: sourceImage.naturalHeight };
+    }
+    return null;
+}
+
+function renderPixel(){
+    const src = getSource();
+    if (!src || !src.w || !src.h) return false;
+
+    const base = Math.max(PIX_W / src.w, PIX_H / src.h);
+    const dw = src.w * base * zoom;
+    const dh = src.h * base * zoom;
+    const maxDX = Math.max(0, dw - PIX_W);
+    const maxDY = Math.max(0, dh - PIX_H);
+
+    let dx = -maxDX / 2 + (panX * maxDX) / 2;
+    let dy = -maxDY / 2 + (panY * maxDY) / 2;
+    dx = clamp(dx, -maxDX, 0);
+    dy = clamp(dy, -maxDY, 0);
+
+    const mirrored = (mode === 'camera' && facing === 'user');
+
+    pixelCtx.imageSmoothingEnabled = true;
+    pixelCtx.imageSmoothingQuality = 'high';
+    pixelCtx.save();
+    if (mirrored){
+        pixelCtx.translate(PIX_W, 0);
+        pixelCtx.scale(-1, 1);
+    }
+    pixelCtx.clearRect(0, 0, PIX_W, PIX_H);
+    pixelCtx.drawImage(src.el, dx, dy, dw, dh);
+    pixelCtx.restore();
+
+    if (currentFilter !== 'original'){
+        const img = pixelCtx.getImageData(0, 0, PIX_W, PIX_H);
+        applyFilter(img.data, currentFilter);
+        pixelCtx.putImageData(img, 0, 0);
+    }
+    return true;
+}
+
+/* ================= 成品合成 ================= */
+const grainTile = (function(){
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const img = g.createImageData(128, 128);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4){
+        const v = (Math.random() * 255) | 0;
+        d[i] = d[i+1] = d[i+2] = v;
+        d[i+3] = (Math.random() * 42) | 0;
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+})();
+
+const cacheMap = new WeakMap();
+function cachesFor(ctx){
+    let m = cacheMap.get(ctx);
+    if (!m){ m = { vig:new Map(), scan:new Map(), grain:null }; cacheMap.set(ctx, m); }
+    return m;
+}
+
+function vignetteFor(ctx, W, H){
+    const c = cachesFor(ctx);
+    const k = W + 'x' + H;
+    let g = c.vig.get(k);
+    if (!g){
+        g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.30, W/2, H/2, Math.hypot(W,H)*0.60);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(0.68, 'rgba(0,0,0,0.10)');
+        g.addColorStop(1, 'rgba(0,0,0,0.46)');
+        c.vig.set(k, g);
+    }
+    return g;
+}
+
+function scanPatternFor(ctx, H){
+    const c = cachesFor(ctx);
+    const step = clamp(Math.round(H / 200), 2, 4);
+    const k = 'scan' + step;
+    let p = c.scan.get(k);
+    if (!p){
+        const tile = document.createElement('canvas');
+        tile.width = 4; tile.height = step;
+        const t = tile.getContext('2d');
+        t.fillStyle = 'rgba(0,0,0,0.30)';
+        t.fillRect(0, step - 1, 4, 1);
+        p = ctx.createPattern(tile, 'repeat');
+        c.scan.set(k, p);
+    }
+    return p;
+}
+
+function grainPatternFor(ctx){
+    const c = cachesFor(ctx);
+    if (!c.grain) c.grain = ctx.createPattern(grainTile, 'repeat');
+    return c.grain;
+}
+
+function drawStamp(ctx, W, H){
+    const size = Math.max(11, Math.round(H * 0.046));
+    const pad = Math.round(W * 0.028);
+    ctx.save();
+    ctx.font = '700 ' + size + 'px "Courier New", Courier, monospace';
+    ctx.textBaseline = 'alphabetic';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = size * 0.42;
+    ctx.fillStyle = 'rgba(255,214,140,0.94)';
+    ctx.fillText(dateStamp(), pad, H - pad);
+    ctx.restore();
+}
+
+function compose(ctx, W, H){
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(pixelCv, 0, 0, W, H);
+
+    if (crtOn){
+        ctx.fillStyle = vignetteFor(ctx, W, H);
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    drawStamp(ctx, W, H);
+
+    if (crtOn){
+        ctx.fillStyle = scanPatternFor(ctx, H);
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.save();
+        ctx.globalAlpha = 0.32;
+        ctx.translate(-((Math.random()*128)|0), -((Math.random()*128)|0));
+        ctx.fillStyle = grainPatternFor(ctx);
+        ctx.fillRect(0, 0, W + 128, H + 128);
+        ctx.restore();
+    }
+}
+
+/* ================= 主循环 ================= */
+function tick(){
+    requestAnimationFrame(tick);
+
+    const live = (mode === 'camera' && videoReady);
+    const redraw = live || needsPixel;
+    if (redraw){
+        if (renderPixel()) hasFrame = true;
+        needsPixel = false;
+    }
+    if (!hasFrame) return;
+
+    // 照片模式是静止画面：只在画面真的变了才重绘取景器，省电
+    if (redraw || previewDirty){
+        if (screenCv.width) compose(screenCtx, screenCv.width, screenCv.height);
+        previewDirty = false;
+    }
+    if (recording) compose(recCtx, recCv.width, recCv.height);
+}
+
+/* ================= 摄像头 ================= */
+function setEmpty(kind, msg, showActions){
+    emptyBox.hidden = false;
+    emptyBox.classList.toggle('loading', kind === 'loading');
+    emptyMsg.textContent = msg;
+    emptyActions.hidden = !showActions;
+}
+function hideEmpty(){ emptyBox.hidden = true; }
+
+function stopStream(){
+    if (stream){
+        stream.getTracks().forEach(function(t){ t.stop(); });
+        stream = null;
+    }
+}
+
+function cameraErrorText(err){
+    if (location.protocol === 'file:'){
+        return '当前是本地文件（file://）方式打开，浏览器不允许使用摄像头。请用本地服务器打开本页。';
+    }
+    if (window.isSecureContext === false){
+        return '当前页面不是安全上下文。浏览器只允许在 https 或 localhost 下调用摄像头。';
+    }
+    const name = err && err.name;
+    if (name === 'NotAllowedError' || name === 'SecurityError'){
+        return '摄像头权限被拒绝。请在地址栏左侧的权限设置里允许摄像头后重试。';
+    }
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError'){
+        return '没有检测到摄像头设备。';
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError'){
+        return '摄像头被其他程序占用或系统禁止访问。';
+    }
+    if (name === 'OverconstrainedError'){
+        return '摄像头不支持所请求的画面参数。';
+    }
+    return '摄像头无法启动：' + (err && err.message ? err.message : '未知错误');
+}
+
+async function startCamera(){
+    stopStream();
+    videoReady = false;
+    hasFrame = false;
+    setEmpty('loading', '正在开启摄像头…', false);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        let msg;
+        if (location.protocol === 'file:'){
+            msg = '本地文件（file://）方式打开时浏览器禁止使用摄像头。请用本地服务器打开本页。';
+        } else if (window.isSecureContext === false){
+            msg = '需要通过 https 或 localhost 访问才能调用摄像头。';
+        } else {
+            msg = '当前浏览器不支持摄像头。';
         }
+        setEmpty('error', msg, true);
+        return;
+    }
 
-        function startLoop() {
-            function loop(now) {
-                updateZoomByTime(now);
-                if (mode !== 'camera') { animationId = null; return; }
-                if (!frozen) pixelateFrame();
-                else if (frozenFrame && canvas.width > 0) ctx.putImageData(frozenFrame, 0, 0);
-                animationId = requestAnimationFrame(loop);
-            }
-            if (animationId) cancelAnimationFrame(animationId);
-            requestAnimationFrame(loop);
-        }
-
-        function capturePhoto() {
-            if (canvas.width === 0) return;
-            flash.classList.add('fire');
-            setTimeout(() => flash.classList.remove('fire'), 120);
-            canvas.toBlob(blob => {
-                if (!blob) return;
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                const now = new Date();
-                const ts = [now.getFullYear(), pad(now.getMonth()+1), pad(now.getDate())].join('') + '_' +
-                           [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join('');
-                a.download = 'DV301_' + ts + '.png';
-                a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-            }, 'image/png');
-        }
-        function pad(n) { return String(n).padStart(2, '0'); }
-
-        function switchToUpload(img) {
-            if (recording) stopRecording();
-            stopCamera();
-            mode = 'upload'; uploadedImage = img;
-            frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结';
-            videoReady = false;
-            placeholder.style.display = 'none'; canvas.style.display = 'block';
-            updateZoomDisplay();
-            processImage();
-        }
-
-        function stopCamera() {
-            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-            videoReady = false;
-        }
-
-        function initCamera() {
-            if (recording) stopRecording();
-            stopCamera();
-            frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结';
-            canvas.style.display = 'none'; placeholder.style.display = 'flex'; placeholder.textContent = '启动中…';
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: facingMode, width: 640, height: 640 },
+    try{
+        try{
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 1280 } },
                 audio: false
-            }).then(s => {
-                stream = s;
-                video.srcObject = stream;
-                return video.play();
-            }).then(() => {
-                return new Promise(resolve => {
-                    function onReady() { video.removeEventListener('loadedmetadata', onReady); resolve(); }
-                    video.addEventListener('loadedmetadata', onReady);
-                    setTimeout(() => { if (!videoReady && video.videoWidth > 0) resolve(); }, 2000);
-                });
-            }).then(() => {
-                videoReady = true;
-                const raw = Math.min(video.videoWidth, video.videoHeight) || 640;
-                const blockDisplaySize = BASE_BLOCK / zoomLevel;
-                canvas.width = Math.round(TARGET_BLOCKS * blockDisplaySize);
-                canvas.height = canvas.width;
-                startLoop();
-                placeholder.style.display = 'none'; canvas.style.display = 'block';
-            }).catch(err => {
-                console.error(err);
-                placeholder.textContent = '摄像头不可用，请使用上传';
             });
-        }
-
-        function switchToCamera() {
-            if (recording) stopRecording();
-            stopCamera();
-            mode = 'camera'; uploadedImage = null; frozen = false; frozenFrame = null;
-            freezeBtn.textContent = '冻结';
-            canvas.style.display = 'none'; placeholder.style.display = 'flex';
-            initCamera();
-        }
-
-        function toggleFreeze() {
-            if (mode === 'upload') return;
-            if (frozen) { frozen = false; frozenFrame = null; freezeBtn.textContent = '冻结'; }
-            else { frozen = true; if (canvas.width > 0) frozenFrame = ctx.getImageData(0,0,canvas.width,canvas.height); freezeBtn.textContent = '解冻'; }
-        }
-
-        // 录制（使用固定尺寸 recordCanvas，不再中断）
-        async function startRecording() {
-            if (mode !== 'camera' || recording) return;
-            recordedChunks = [];
-
-            // 设置录制 Canvas 尺寸
-            recordCanvas.width = 500;
-            recordCanvas.height = 500;
-
-            const canvasStream = recordCanvas.captureStream(24);
-            const combinedStream = new MediaStream();
-            canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
-
-            let hasAudio = false;
-            try {
-                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioStream.getAudioTracks().forEach(track => {
-                    combinedStream.addTrack(track);
-                    hasAudio = true;
-                });
-            } catch (e) { /* 无声录制 */ }
-
-            const mimes = [
-                'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-                'video/mp4;codecs=avc1.42E01E',
-                'video/mp4',
-                'video/webm;codecs=vp8,opus',
-                'video/webm;codecs=vp9,opus',
-                'video/webm'
-            ];
-            let mimeType = '';
-            for (const m of mimes) {
-                if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
+        }catch(e1){
+            if (e1 && (e1.name === 'OverconstrainedError' || e1.name === 'ConstraintNotSatisfiedError')){
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            } else {
+                throw e1;
             }
-            if (!mimeType) { warningEl.textContent = '录制不支持'; return; }
-
-            try {
-                mediaRecorder = new MediaRecorder(combinedStream, {
-                    mimeType: mimeType,
-                    videoBitsPerSecond: 2500000,
-                    audioBitsPerSecond: hasAudio ? 128000 : 0
-                });
-            } catch (e) { warningEl.textContent = '无法创建录制器'; return; }
-
-            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-            mediaRecorder.onstop = () => {
-                if (recordedChunks.length === 0) return;
-                const blob = new Blob(recordedChunks, { type: mimeType });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                const now = new Date();
-                const ts = [now.getFullYear(), pad(now.getMonth()+1), pad(now.getDate())].join('') + '_' +
-                           [pad(now.getHours()), pad(now.getMinutes()), pad(now.getSeconds())].join('');
-                const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-                a.download = 'DV301_' + ts + '.' + ext;
-                a.href = url; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                recordedChunks = [];
-                if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
-            };
-            mediaRecorder.start();
-            recording = true;
-            recordBtn.textContent = '停止'; recordBtn.classList.add('recording');
-            recDot.classList.add('active'); recText.classList.add('active');
-
-            // 立即把当前主 Canvas 内容复制到录制 Canvas
-            recordCtx.clearRect(0, 0, recordCanvas.width, recordCanvas.height);
-            recordCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, recordCanvas.width, recordCanvas.height);
         }
+        video.srcObject = stream;
+        try { await video.play(); } catch(playErr){}
+        videoReady = true;
+        mode = 'camera';
+        sourceImage = null;
+        zoom = 1; panX = 0; panY = 0;
+        updateZoomUI();
+        updateModeUI();
+        hideEmpty();
+        needsPixel = true;
+    } catch(err){
+        console.warn('[DV-301] camera error:', err);
+        setEmpty('error', cameraErrorText(err), true);
+    }
+}
 
-        function stopRecording() {
-            if (!recording || !mediaRecorder) return;
-            try { mediaRecorder.stop(); } catch (e) {}
-            recording = false;
-            recordBtn.textContent = '录制'; recordBtn.classList.remove('recording');
-            recDot.classList.remove('active'); recText.classList.remove('active');
-            mediaRecorder = null;
+async function flipCamera(){
+    if (mode === 'photo'){
+        if (videoReady){
+            mode = 'camera';
+            sourceImage = null;
+            hasFrame = false;
+            hideEmpty();
+            updateModeUI();
+            toast('已回到实时画面');
+        } else {
+            await startCamera();
         }
+        return;
+    }
+    if (recording){ toast('录像中无法切换'); return; }
+    facing = (facing === 'environment') ? 'user' : 'environment';
+    await startCamera();
+    toast(facing === 'user' ? '前置摄像头' : '后置摄像头');
+}
 
-        uploadBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', e => {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = ev => {
-                const img = new Image();
-                img.onload = () => switchToUpload(img);
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-            fileInput.value = '';
-        });
-        captureBtn.addEventListener('click', () => {
-            if (mode === 'camera' && !videoReady) { initCamera(); return; }
-            capturePhoto();
-        });
-        switchBtn.addEventListener('click', () => {
-            if (mode === 'upload') return;
-            facingMode = facingMode === 'environment' ? 'user' : 'environment';
-            initCamera();
-        });
-        freezeBtn.addEventListener('click', toggleFreeze);
-        canvas.addEventListener('click', toggleFreeze);
-        dvBtn.addEventListener('click', () => {
-            dvEnabled = !dvEnabled;
-            dvBtn.classList.toggle('active', dvEnabled);
-            if (mode === 'upload' && uploadedImage) processImage();
-        });
-        recordBtn.addEventListener('click', () => {
-            if (!recording) startRecording(); else stopRecording();
-        });
+/* ================= 模式 ================= */
+function updateModeUI(){
+    const photo = (mode === 'photo');
+    osdMode.textContent = photo ? 'PHOTO' : 'CAM';
+    flipLabel.textContent = photo ? '相机' : '翻转';
+}
 
-        updateFilterUI();
-        updateZoomDisplay();
-        initCamera();
-    })();
-    </script>
+/* ================= 上传 ================= */
+function pickFile(){ fileInput.click(); }
+uploadBtn.addEventListener('click', pickFile);
+$('emptyUploadBtn').addEventListener('click', pickFile);
+$('retryBtn').addEventListener('click', function(){ startCamera(); });
+
+fileInput.addEventListener('change', function(e){
+    const f = e.target.files && e.target.files[0];
+    fileInput.value = '';
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = function(){
+        URL.revokeObjectURL(url);
+        switchToPhoto(img);
+    };
+    img.onerror = function(){
+        URL.revokeObjectURL(url);
+        toast('无法读取这张图片');
+    };
+    img.src = url;
+});
+
+function switchToPhoto(img){
+    sourceImage = img;
+    mode = 'photo';
+    zoom = 1; panX = 0; panY = 0;
+    updateZoomUI();
+    updateModeUI();
+    hideEmpty();
+    needsPixel = true;
+    toast('已载入照片 · 可缩放平移');
+}
+
+/* ================= 拍照 ================= */
+function flashScreen(){
+    flashEl.classList.remove('go');
+    void flashEl.offsetWidth;
+    flashEl.classList.add('go');
+}
+
+function shutter(){
+    if (!hasFrame){ toast('画面还没准备好'); return; }
+
+    const W = EXPORT_W;
+    const H = Math.round(EXPORT_W * PIX_H / PIX_W);
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    compose(c.getContext('2d'), W, H);
+
+    flashScreen();
+    playShutter();
+    haptic(16);
+
+    c.toBlob(function(blob){
+        if (!blob){ toast('保存失败'); return; }
+        const name = 'DV301_' + fileStamp() + '.png';
+        download(blob, name);
+        toast('已保存照片');
+    }, 'image/png');
+}
+
+shutterBtn.addEventListener('click', shutter);
+
+/* ================= 下载 ================= */
+function download(blob, name){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){
+        a.remove();
+        URL.revokeObjectURL(url);
+    }, 10000);
+}
+
+/* ================= 录像 ================= */
+function pickMimes(){
+    const list = [
+        'video/mp4;codecs=avc1.42E01E',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm'
+    ];
+    if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return [''];
+    return list.filter(function(m){
+        try { return MediaRecorder.isTypeSupported(m); } catch(e){ return false; }
+    }).concat(['']);
+}
+
+function micWithTimeout(ms){
+    const req = navigator.mediaDevices.getUserMedia({ audio: true });
+    let late = false;
+    const guard = new Promise(function(_, reject){
+        setTimeout(function(){ late = true; reject(new Error('mic-timeout')); }, ms);
+    });
+    // 防止竞速失败方的 rejection 变成未处理异常
+    guard.catch(function(){});
+    req.then(function(s){
+        if (late) s.getTracks().forEach(function(t){ t.stop(); });
+    }).catch(function(){});
+    return Promise.race([req, guard]);
+}
+
+function releaseTracks(){
+    if (capStream){
+        capStream.getTracks().forEach(function(t){ t.stop(); });
+        capStream = null;
+    }
+    if (auxAudio){
+        auxAudio.getTracks().forEach(function(t){ t.stop(); });
+        auxAudio = null;
+    }
+}
+
+function buildRecorder(){
+    const opts = { videoBitsPerSecond: 5000000 };
+    const candidates = pickMimes();
+    for (let i = 0; i < candidates.length; i++){
+        const m = candidates[i];
+        const o = Object.assign({}, opts);
+        if (m) o.mimeType = m;
+        try {
+            return { rec: new MediaRecorder(capStream, o), mime: m };
+        } catch(e){ /* 下一个 */ }
+    }
+    return null;
+}
+
+async function startRecording(){
+    if (recording) return;
+    if (!hasFrame){ toast('画面还没准备好'); return; }
+    if (typeof MediaRecorder === 'undefined'){ toast('当前浏览器不支持录像'); return; }
+
+    recBtn.disabled = true;
+    recCap.textContent = '准备';
+
+    // 先同步捕获画布流，保住 Safari 的用户手势上下文
+    recCv.width = PIX_W * 4;
+    recCv.height = PIX_H * 4;
+    compose(recCtx, recCv.width, recCv.height);
+
+    try { capStream = recCv.captureStream(30); }
+    catch(e){
+        recBtn.disabled = false;
+        recCap.textContent = '录像';
+        toast('无法录制画面');
+        return;
+    }
+
+    // 最多等 1.2 秒拿麦克风，超时就先录无声画面，不让用户干等权限弹窗
+    let audioStream = null;
+    try{
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+            audioStream = await micWithTimeout(1200);
+        }
+    } catch(e){ audioStream = null; }
+
+    recCap.textContent = '录像';
+
+    if (audioStream){
+        const tracks = audioStream.getAudioTracks();
+        for (let i = 0; i < tracks.length; i++) capStream.addTrack(tracks[i]);
+        auxAudio = audioStream;
+    }
+
+    const built = buildRecorder();
+    if (!built){
+        releaseTracks();
+        recBtn.disabled = false;
+        toast('录像启动失败');
+        return;
+    }
+
+    mediaRecorder = built.rec;
+    recordMime = built.mime;
+    recordedChunks = [];
+
+    mediaRecorder.ondataavailable = function(e){
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = function(){ finishRecording(); };
+    mediaRecorder.onerror = function(){
+        toast('录制出错，已停止');
+        if (recording) stopRecording();
+    };
+
+    try { mediaRecorder.start(1000); }
+    catch(e){
+        releaseTracks();
+        recBtn.disabled = false;
+        toast('录像启动失败');
+        return;
+    }
+
+    recording = true;
+    recStartTs = Date.now();
+    recBtn.disabled = false;
+    recBtn.classList.add('on');
+    recCap.textContent = '停止';
+    osdRec.classList.add('on');
+    lcdWrap.classList.add('rec');
+    osdRecTime.textContent = '00:00';
+    setLocked(true);
+    thunkSound();
+    haptic(20);
+
+    clearInterval(recTimerId);
+    recTimerId = setInterval(function(){
+        const ms = Date.now() - recStartTs;
+        const s = Math.floor(ms / 1000);
+        osdRecTime.textContent = pad2(Math.floor(s / 60)) + ':' + pad2(s % 60);
+        if (ms >= MAX_REC_MS){
+            toast('已达单段 60 秒上限');
+            stopRecording();
+        }
+    }, 250);
+}
+
+function stopRecording(){
+    if (!recording) return;
+    recording = false;
+    clearInterval(recTimerId);
+
+    recBtn.classList.remove('on');
+    recCap.textContent = '录像';
+    osdRec.classList.remove('on');
+    lcdWrap.classList.remove('rec');
+    setLocked(false);
+    clickSound(1200, 0.22);
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive'){
+        try { mediaRecorder.stop(); } catch(e){ try { finishRecording(); } catch(e2){} }
+    } else {
+        finishRecording();
+    }
+}
+
+function finishRecording(){
+    const blob = new Blob(recordedChunks, { type: recordMime || 'video/webm' });
+    recordedChunks = [];
+
+    releaseTracks();
+    mediaRecorder = null;
+
+    if (blob.size > 0){
+        const ext = (recordMime.indexOf('mp4') >= 0) ? 'mp4' : 'webm';
+        const name = 'DV301_' + fileStamp() + '.' + ext;
+        download(blob, name);
+        toast('已保存录像');
+    } else {
+        toast('录像内容为空');
+    }
+}
+
+recBtn.addEventListener('click', function(){
+    if (!recording) startRecording();
+    else stopRecording();
+});
+
+function setLocked(locked){
+    [flipBtn, pixBtn, uploadBtn].forEach(function(b){ b.disabled = locked; });
+}
+
+/* ================= 键盘 ================= */
+window.addEventListener('keydown', function(e){
+    if (e.target && e.target.closest && e.target.closest('button, input, textarea')) return;
+    if (e.code === 'Space'){
+        e.preventDefault();
+        shutter();
+    } else if (e.key === 'r' || e.key === 'R'){
+        if (recording) stopRecording(); else startRecording();
+    } else if (e.key === 'ArrowUp'){
+        e.preventDefault();
+        setZoom(zoom + ZOOM_STEP);
+    } else if (e.key === 'ArrowDown'){
+        e.preventDefault();
+        setZoom(zoom - ZOOM_STEP);
+    } else if (e.key === 'ArrowLeft'){
+        e.preventDefault();
+        selectFilter(filterIndex - 1);
+    } else if (e.key === 'ArrowRight'){
+        e.preventDefault();
+        selectFilter(filterIndex + 1);
+    }
+});
+
+document.addEventListener('visibilitychange', function(){
+    if (document.hidden && recording){
+        stopRecording();
+        toast('已切到后台，录像自动停止');
+    }
+});
+
+/* ================= CRT / 像素档位 ================= */
+crtBtn.addEventListener('click', function(){
+    crtOn = !crtOn;
+    crtBtn.setAttribute('aria-checked', crtOn ? 'true' : 'false');
+    previewDirty = true;
+    clickSound(crtOn ? 2200 : 1500, 0.22);
+    haptic(9);
+});
+
+function setPixelLevel(i){
+    pixIndex = (i + PIX_LEVELS.length) % PIX_LEVELS.length;
+    const lv = PIX_LEVELS[pixIndex];
+    PIX_W = lv.w; PIX_H = lv.h;
+    pixelCv.width = PIX_W;
+    pixelCv.height = PIX_H;
+    recCv.width = PIX_W * 4;
+    recCv.height = PIX_H * 4;
+    pixLabel.textContent = lv.name;
+    needsPixel = true;
+    toast('像素 ' + lv.name + ' · ' + lv.w + '×' + lv.h, 1200);
+}
+
+pixBtn.addEventListener('click', function(){
+    if (recording){ toast('录像中无法更换画质'); return; }
+    setPixelLevel(pixIndex + 1);
+});
+
+/* ================= 启动 ================= */
+sizeScreen();
+layoutDrum(false);
+updateZoomUI();
+updateModeUI();
+requestAnimationFrame(tick);
+startCamera();
+
+setTimeout(function(){
+    if (hasFrame) toast('按住 T / W 连续变焦 · 拨动滚轮换滤镜', 2600);
+}, 1600);
+
+})();
+</script>
 </body>
 </html>
