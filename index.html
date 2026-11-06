@@ -555,6 +555,7 @@ const DRUM_H = 24;
    gamma          每通道中间调明暗，用来做色温与偏色
    shadow / high  暗部、亮部染色
    sat            饱和度
+   satHi          高光失饱和强度：胶片高光染料密度见顶，颜色会自然变淡
    matrix         3×3 色彩串扰矩阵，模拟三层乳剂之间的相互影响
    bwMix          黑白片的三通道混合权重
    halation       高光在乳剂层里散射出的红色光晕
@@ -564,32 +565,50 @@ const STOCKS = [
     {
         key:'none', name:'原色', label:'原色 · 无模拟',
         black:[0,0,0], white:[1,1,1], contrast:0, gamma:[1,1,1],
-        shadow:[0,0,0], high:[0,0,0], sat:1, grain:0
+        shadow:[0,0,0], high:[0,0,0], sat:1, satHi:0, grain:0
     },
     {
         key:'portra400', name:'波特拉', label:'Kodak Portra 400 · 人像',
         black:[0.028,0.022,0.034], white:[0.975,0.978,0.982],
         contrast:0.16, gamma:[0.98,1.0,1.03],
         shadow:[0.008,0.002,0.012], high:[0.014,0.008,-0.002],
-        sat:0.9, grain:0.5,
+        sat:0.9, satHi:0.35, grain:0.5,
         matrix:[1.015,-0.005,-0.010, -0.005,1.010,-0.005, 0.000,-0.010,1.010],
         halation:{ amount:0.30, threshold:0.72, color:[255,96,62] }
+    },
+    {
+        key:'portra800', name:'波800', label:'Kodak Portra 800 · 暖人像',
+        black:[0.03,0.026,0.036], white:[0.968,0.972,0.976],
+        contrast:0.14, gamma:[0.96,1.0,1.04],
+        shadow:[0.01,0.002,0.012], high:[0.018,0.01,-0.002],
+        sat:0.88, satHi:0.38, grain:0.78,
+        matrix:[1.020,-0.008,-0.012, -0.008,1.012,-0.004, 0.000,-0.012,1.012],
+        halation:{ amount:0.34, threshold:0.70, color:[255,92,58] }
     },
     {
         key:'gold200', name:'金200', label:'Kodak Gold 200 · 暖调',
         black:[0.03,0.028,0.04], white:[0.97,0.972,0.96],
         contrast:0.24, gamma:[0.96,1.0,1.05],
         shadow:[0.008,0.002,0.01], high:[0.02,0.012,-0.004],
-        sat:1.04, grain:0.7,
+        sat:1.04, satHi:0.42, grain:0.7,
         matrix:[1.030,-0.015,-0.015, -0.005,1.010,-0.005, -0.015,0.000,1.015],
         halation:{ amount:0.36, threshold:0.70, color:[255,102,54] }
+    },
+    {
+        key:'ektar100', name:'埃克塔', label:'Kodak Ektar 100 · 浓郁',
+        black:[0.012,0.012,0.016], white:[0.985,0.985,0.988],
+        contrast:0.30, gamma:[0.99,1.0,1.02],
+        shadow:[0.004,0.0,0.006], high:[0.008,0.002,-0.002],
+        sat:1.12, satHi:0.16, grain:0.22,
+        matrix:[1.035,-0.018,-0.017, -0.012,1.030,-0.018, -0.016,-0.018,1.034],
+        halation:{ amount:0.18, threshold:0.78, color:[255,110,80] }
     },
     {
         key:'pro400h', name:'富士', label:'Fujifilm Pro 400H · 清透',
         black:[0.028,0.03,0.026], white:[0.98,0.982,0.975],
         contrast:0.2, gamma:[1.05,1.0,0.97],
         shadow:[-0.002,0.006,0.014], high:[0.004,0.01,0.008],
-        sat:0.9, grain:0.4,
+        sat:0.9, satHi:0.34, grain:0.4,
         matrix:[0.990,0.010,0.000, 0.000,1.010,-0.010, -0.010,0.020,0.990],
         halation:{ amount:0.22, threshold:0.75, color:[255,160,150] }
     },
@@ -598,7 +617,7 @@ const STOCKS = [
         black:[0.04,0.045,0.06], white:[0.95,0.955,0.96],
         contrast:0.3, gamma:[0.97,1.0,1.06],
         shadow:[-0.006,0.004,0.02], high:[0.018,0.008,-0.002],
-        sat:0.98, grain:0.8,
+        sat:0.98, satHi:0.28, grain:0.8,
         matrix:[1.005,0.000,-0.005, 0.000,1.010,-0.010, -0.005,0.010,0.995],
         halation:{ amount:0.95, threshold:0.60, color:[255,80,44] }
     },
@@ -607,9 +626,18 @@ const STOCKS = [
         black:[0.005,0.005,0.01], white:[0.99,0.99,0.995],
         contrast:0.5, gamma:[0.98,1.0,1.01],
         shadow:[0,0,0.006], high:[0.006,0.002,0],
-        sat:1.2, grain:0.3,
+        sat:1.2, satHi:0.10, grain:0.3,
         matrix:[1.040,-0.020,-0.020, -0.010,1.030,-0.020, -0.020,-0.020,1.040],
         halation:{ amount:0.14, threshold:0.82, color:[255,128,96] }
+    },
+    {
+        key:'provia100f', name:'普罗维', label:'Fujifilm Provia 100F · 中性反转',
+        black:[0.008,0.008,0.012], white:[0.988,0.988,0.99],
+        contrast:0.36, gamma:[1.0,1.0,1.01],
+        shadow:[-0.002,0.002,0.008], high:[0.002,0.002,0.0],
+        sat:1.06, satHi:0.16, grain:0.18,
+        matrix:[1.025,-0.012,-0.013, -0.008,1.020,-0.012, -0.012,-0.012,1.024],
+        halation:{ amount:0.16, threshold:0.80, color:[255,120,90] }
     },
     {
         key:'trix400', name:'黑白', label:'Kodak Tri-X 400 · 黑白',
@@ -620,11 +648,19 @@ const STOCKS = [
         halation:{ amount:0.12, threshold:0.86, color:[255,150,120] }
     },
     {
+        key:'hp5', name:'HP5', label:'Ilford HP5 Plus 400 · 黑白',
+        black:[0.025,0.025,0.025], white:[0.975,0.975,0.975],
+        contrast:0.34, gamma:[1,1,1],
+        shadow:[0,0,0], high:[0,0,0],
+        sat:1, grain:0.9, bw:true, bwMix:[0.30,0.59,0.11],
+        halation:{ amount:0.10, threshold:0.86, color:[255,150,120] }
+    },
+    {
         key:'cool', name:'冷调', label:'冷调 · 现代',
         black:[0.015,0.02,0.03], white:[0.98,0.98,0.985],
         contrast:0.18, gamma:[1.04,1.0,0.94],
         shadow:[-0.004,0.004,0.016], high:[0,0.004,0.012],
-        sat:0.92, grain:0.1,
+        sat:0.92, satHi:0.22, grain:0.1,
         matrix:[0.985,0.000,0.015, 0.000,1.000,0.000, 0.005,0.005,0.990]
     }
 ];
@@ -664,6 +700,28 @@ function stockLut(st){
     return lut;
 }
 
+/* 亮度相关的饱和度：胶片高光处染料密度见顶，颜色会自然变淡；
+   做成 256 项表，逐像素只查一次，不和全局饱和度相乘。 */
+const satTabCache = new Map();
+function satTableFor(st){
+    let t = satTabCache.get(st.key);
+    if (t) return t;
+    t = new Float32Array(256);
+    const hi = st.satHi || 0;
+    for (let i = 0; i < 256; i++){
+        const l = i / 255;
+        let f = 1;
+        if (hi > 0 && l > 0.60){
+            let x = (l - 0.60) / 0.40;
+            if (x > 1) x = 1;
+            f = 1 - hi * x * x * (3 - 2 * x);
+        }
+        t[i] = f;
+    }
+    satTabCache.set(st.key, t);
+    return t;
+}
+
 /* 每档宽度都能整除导出宽度（2304），保证最近邻放大是整数倍、像素块不糊 */
 const PIX_LEVELS = [
     { name:'粗', w:144, h:108 },
@@ -690,6 +748,7 @@ let needsPixel = true;
 
 let zoom = 1, panX = 0, panY = 0;
 let crtOn = true;
+let hdBusy = false;
 
 let recording = false;
 let mediaRecorder = null;
@@ -712,15 +771,22 @@ const recCtx = recCv.getContext('2d');
 pixelCv.width = PIX_W; pixelCv.height = PIX_H;
 recCv.width = PIX_W * 4; recCv.height = PIX_H * 4;
 
-/* 光晕：高光遮罩 → 缩到 1/4 再放大，得到柔和的红色溢光 */
-const haloCv = document.createElement('canvas');
-const haloCtx = haloCv.getContext('2d', { willReadFrequently:true });
-const haloBlurCv = document.createElement('canvas');
-const haloBlurCtx = haloBlurCv.getContext('2d');
-const haloWideCv = document.createElement('canvas');
-const haloWideCtx = haloWideCv.getContext('2d');
-let haloImg = null;
-let haloOn = false;
+/* 光晕：高光遮罩 → 缩到 1/8、1/32 再放大，得到两层柔和的红色溢光。
+   工作区做成可复用对象：预览用像素档尺寸，高清导出用原图尺寸。 */
+function makeHaloSet(W, H){
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const blurCv = document.createElement('canvas');
+    const wideCv = document.createElement('canvas');
+    return {
+        cv: cv, ctx: cv.getContext('2d', { willReadFrequently:true }),
+        W: W, H: H, img: null,
+        blurCv: blurCv, blurCtx: blurCv.getContext('2d'),
+        wideCv: wideCv, wideCtx: wideCv.getContext('2d'),
+        on: false
+    };
+}
+let haloSet = makeHaloSet(PIX_W, PIX_H);
 
 /* ================= 小工具 ================= */
 function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
@@ -768,7 +834,9 @@ dvEl.addEventListener('pointerdown', function(e){
 /* ================= 画布尺寸 ================= */
 function sizeScreen(){
     const rect = lcdInner.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // 触屏设备把预览画布的上限压到 1.5 倍，像素密度够看，又能少画近一半像素
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2);
     const w = Math.max(1, Math.round(rect.width * dpr));
     const h = Math.max(1, Math.round(rect.height * dpr));
     if (screenCv.width !== w || screenCv.height !== h){
@@ -785,26 +853,23 @@ if (window.ResizeObserver){
 window.addEventListener('orientationchange', function(){ setTimeout(sizeScreen, 250); });
 
 /* ================= 胶片处理 ================= */
-function applyStock(d, st){
+function applyStock(d, st, hs){
+    hs = hs || haloSet;
     const lut = stockLut(st);
     const n = d.length;
     const sat = st.sat == null ? 1 : st.sat;
     const bw = !!st.bw;
+    const satTab = bw ? null : satTableFor(st);
     const bwMix = st.bwMix || [0.3, 0.59, 0.11];
     const m = st.matrix;
     const hal = st.halation;
     let hd = null, thr = 0, span = 1, cr = 0, cg = 0, cb = 0;
 
     if (hal && hal.amount > 0){
-        if (haloCv.width !== PIX_W || haloCv.height !== PIX_H){
-            haloCv.width = PIX_W;
-            haloCv.height = PIX_H;
-            haloImg = null;
+        if (!hs.img || hs.img.width !== hs.W || hs.img.height !== hs.H){
+            hs.img = hs.ctx.createImageData(hs.W, hs.H);
         }
-        if (!haloImg || haloImg.width !== PIX_W || haloImg.height !== PIX_H){
-            haloImg = haloCtx.createImageData(PIX_W, PIX_H);
-        }
-        hd = haloImg.data;
+        hd = hs.img.data;
         hd.fill(0);
         thr = hal.threshold * 255;
         span = Math.max(1, 255 - thr);
@@ -825,9 +890,13 @@ function applyStock(d, st){
             d[i] = d[i+1] = d[i+2] = l;
         } else {
             l = r * 0.2126 + g * 0.7152 + b * 0.0722;
-            d[i]   = l + (r - l) * sat;
-            d[i+1] = l + (g - l) * sat;
-            d[i+2] = l + (b - l) * sat;
+            // 高光失饱和：越亮的地方饱和度越低，和真实胶片的染料表现一致
+            let li = l | 0;
+            if (li < 0) li = 0; else if (li > 255) li = 255;
+            const s = sat * satTab[li];
+            d[i]   = l + (r - l) * s;
+            d[i+1] = l + (g - l) * s;
+            d[i+2] = l + (b - l) * s;
         }
         if (hd){
             let v = ((d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114) - thr) / span;
@@ -843,32 +912,32 @@ function applyStock(d, st){
     }
 
     if (hd){
-        haloCtx.putImageData(haloImg, 0, 0);
+        hs.ctx.putImageData(hs.img, 0, 0);
         // 缩到 1/8 再放大回去：一次大半径柔化，得到胶片那种宽而软的溢光
-        const bw2 = Math.max(1, PIX_W >> 3);
-        const bh2 = Math.max(1, PIX_H >> 3);
-        if (haloBlurCv.width !== bw2 || haloBlurCv.height !== bh2){
-            haloBlurCv.width = bw2;
-            haloBlurCv.height = bh2;
+        const bw2 = Math.max(1, hs.W >> 3);
+        const bh2 = Math.max(1, hs.H >> 3);
+        if (hs.blurCv.width !== bw2 || hs.blurCv.height !== bh2){
+            hs.blurCv.width = bw2;
+            hs.blurCv.height = bh2;
         }
-        haloBlurCtx.imageSmoothingEnabled = true;
-        haloBlurCtx.clearRect(0, 0, bw2, bh2);
-        haloBlurCtx.drawImage(haloCv, 0, 0, bw2, bh2);
+        hs.blurCtx.imageSmoothingEnabled = true;
+        hs.blurCtx.clearRect(0, 0, bw2, bh2);
+        hs.blurCtx.drawImage(hs.cv, 0, 0, bw2, bh2);
 
         // 再缩一档，做一层更宽的尾晕；两层叠起来才是乳剂散射的衰减
-        const bw3 = Math.max(1, PIX_W >> 5);
-        const bh3 = Math.max(1, PIX_H >> 5);
-        if (haloWideCv.width !== bw3 || haloWideCv.height !== bh3){
-            haloWideCv.width = bw3;
-            haloWideCv.height = bh3;
+        const bw3 = Math.max(1, hs.W >> 5);
+        const bh3 = Math.max(1, hs.H >> 5);
+        if (hs.wideCv.width !== bw3 || hs.wideCv.height !== bh3){
+            hs.wideCv.width = bw3;
+            hs.wideCv.height = bh3;
         }
-        haloWideCtx.imageSmoothingEnabled = true;
-        haloWideCtx.clearRect(0, 0, bw3, bh3);
-        haloWideCtx.drawImage(haloCv, 0, 0, bw3, bh3);
+        hs.wideCtx.imageSmoothingEnabled = true;
+        hs.wideCtx.clearRect(0, 0, bw3, bh3);
+        hs.wideCtx.drawImage(hs.cv, 0, 0, bw3, bh3);
 
-        haloOn = true;
+        hs.on = true;
     } else {
-        haloOn = false;
+        hs.on = false;
     }
 }
 
@@ -1098,16 +1167,8 @@ function renderPixel(){
     const src = getSource();
     if (!src || !src.w || !src.h) return false;
 
-    const base = Math.max(PIX_W / src.w, PIX_H / src.h);
-    const dw = src.w * base * zoom;
-    const dh = src.h * base * zoom;
-    const maxDX = Math.max(0, dw - PIX_W);
-    const maxDY = Math.max(0, dh - PIX_H);
-
-    let dx = -maxDX / 2 + (panX * maxDX) / 2;
-    let dy = -maxDY / 2 + (panY * maxDY) / 2;
-    dx = clamp(dx, -maxDX, 0);
-    dy = clamp(dy, -maxDY, 0);
+    const f = frameRect(src);
+    const dw = f.dw, dh = f.dh, dx = f.dx, dy = f.dy;
 
     const mirrored = (mode === 'camera' && facing === 'user');
 
@@ -1125,32 +1186,37 @@ function renderPixel(){
     const st = STOCKS[stockIndex];
     if (st.key !== 'none'){
         const img = pixelCtx.getImageData(0, 0, PIX_W, PIX_H);
-        applyStock(img.data, st);
+        applyStock(img.data, st, haloSet);
         pixelCtx.putImageData(img, 0, 0);
     } else {
-        haloOn = false;
+        haloSet.on = false;
     }
     return true;
 }
 
 /* ================= 成品合成 ================= */
 /* 颗粒：两层不同尺度的彩色噪点，围绕中灰用 overlay 混合。
-   这样是“调制亮度”的胶片颗粒，而不是把灰噪点直接盖在画面上。 */
+   亮度噪声为主、彩噪为辅，接近真实的三色染料云而不是 RGB 独立噪点。
+   block 会随输出尺寸放大，保证 2304px 照片缩到预览大小时颗粒观感和取景器一致。 */
+const grainTiles = new Map();
 function makeGrainTile(size, block){
     const c = document.createElement('canvas');
     c.width = c.height = size;
     const g = c.getContext('2d');
     const img = g.createImageData(size, size);
     const d = img.data;
-    for (let y = 0; y < size; y += block){
-        for (let x = 0; x < size; x += block){
+    const cr = 12, cg = 12, cb = 12; // 三通道各自的轻微色偏
+    for (let by = 0; by < size; by += block){
+        for (let bx = 0; bx < size; bx += block){
             const lum = ((Math.random() + Math.random() + Math.random()) / 3 - 0.5) * 2;
-            const r = clamp(128 + lum * 86 + (Math.random() - 0.5) * 34, 0, 255);
-            const gg = clamp(128 + lum * 86 + (Math.random() - 0.5) * 34, 0, 255);
-            const bb = clamp(128 + lum * 86 + (Math.random() - 0.5) * 34, 0, 255);
-            for (let yy = 0; yy < block; yy++){
-                for (let xx = 0; xx < block; xx++){
-                    const i = ((y + yy) * size + (x + xx)) * 4;
+            const r = clamp(128 + lum * 92 + (Math.random() - 0.5) * cr, 0, 255);
+            const gg = clamp(128 + lum * 92 + (Math.random() - 0.5) * cg, 0, 255);
+            const bb = clamp(128 + lum * 92 + (Math.random() - 0.5) * cb, 0, 255);
+            const h = Math.min(block, size - by);
+            const w = Math.min(block, size - bx);
+            for (let yy = 0; yy < h; yy++){
+                for (let xx = 0; xx < w; xx++){
+                    const i = ((by + yy) * size + (bx + xx)) * 4;
                     d[i] = r; d[i+1] = gg; d[i+2] = bb; d[i+3] = 255;
                 }
             }
@@ -1159,13 +1225,20 @@ function makeGrainTile(size, block){
     g.putImageData(img, 0, 0);
     return c;
 }
-const grainFineTile = makeGrainTile(256, 1);
-const grainCoarseTile = makeGrainTile(128, 2);
+function grainTileFor(size, block){
+    const key = size + ':' + block;
+    let t = grainTiles.get(key);
+    if (!t){
+        t = makeGrainTile(size, block);
+        grainTiles.set(key, t);
+    }
+    return t;
+}
 
 const cacheMap = new WeakMap();
 function cachesFor(ctx){
     let m = cacheMap.get(ctx);
-    if (!m){ m = { vig:new Map(), scan:new Map(), grainFine:null, grainCoarse:null }; cacheMap.set(ctx, m); }
+    if (!m){ m = { vig:new Map(), scan:new Map(), grain:new Map() }; cacheMap.set(ctx, m); }
     return m;
 }
 
@@ -1200,16 +1273,15 @@ function scanPatternFor(ctx, H){
     return p;
 }
 
-function grainFinePatternFor(ctx){
+function grainPatternFor(ctx, size, block){
     const c = cachesFor(ctx);
-    if (!c.grainFine) c.grainFine = ctx.createPattern(grainFineTile, 'repeat');
-    return c.grainFine;
-}
-
-function grainCoarsePatternFor(ctx){
-    const c = cachesFor(ctx);
-    if (!c.grainCoarse) c.grainCoarse = ctx.createPattern(grainCoarseTile, 'repeat');
-    return c.grainCoarse;
+    const k = size + ':' + block;
+    let p = c.grain.get(k);
+    if (!p){
+        p = ctx.createPattern(grainTileFor(size, block), 'repeat');
+        c.grain.set(k, p);
+    }
+    return p;
 }
 
 function drawStamp(ctx, W, H){
@@ -1232,14 +1304,14 @@ function compose(ctx, W, H){
     ctx.drawImage(pixelCv, 0, 0, W, H);
 
     // 光晕：高光在胶片乳剂层里散射。大半径那层做整体氛围，小半径那层贴着高光边缘
-    if (haloOn && st.halation && st.halation.amount > 0){
+    if (haloSet.on && st.halation && st.halation.amount > 0){
         ctx.save();
         ctx.globalCompositeOperation = 'screen';
         ctx.imageSmoothingEnabled = true;
         ctx.globalAlpha = st.halation.amount * 0.5;
-        ctx.drawImage(haloWideCv, 0, 0, W, H);
+        ctx.drawImage(haloSet.wideCv, 0, 0, W, H);
         ctx.globalAlpha = st.halation.amount;
-        ctx.drawImage(haloBlurCv, 0, 0, W, H);
+        ctx.drawImage(haloSet.blurCv, 0, 0, W, H);
         ctx.restore();
     }
 
@@ -1261,27 +1333,36 @@ function compose(ctx, W, H){
     const coarseA = Math.min(0.45, (crtOn ? 0.08 : 0) + gs * 0.20);
     const fineA = Math.min(0.50, (crtOn ? 0.16 : 0) + gs * 0.26);
     if (coarseA > 0.005 || fineA > 0.005){
+        // 颗粒尺寸跟着输出宽度走：照片缩到预览大小时，颗粒粗细才不会“消失”
+        const gBlock = Math.max(1, Math.round(W / 480));
+        const fineSize = gBlock > 2 ? 512 : 256;
+        const coarseSize = gBlock > 2 ? 256 : 128;
         ctx.save();
         ctx.globalCompositeOperation = 'overlay';
         if (coarseA > 0.005){
             ctx.globalAlpha = coarseA;
-            ctx.translate(-((Math.random()*128)|0), -((Math.random()*128)|0));
-            ctx.fillStyle = grainCoarsePatternFor(ctx);
-            ctx.fillRect(0, 0, W + 128, H + 128);
+            ctx.translate(-((Math.random()*coarseSize)|0), -((Math.random()*coarseSize)|0));
+            ctx.fillStyle = grainPatternFor(ctx, coarseSize, gBlock * 2);
+            ctx.fillRect(0, 0, W + coarseSize, H + coarseSize);
         }
         if (fineA > 0.005){
             ctx.globalAlpha = fineA;
-            ctx.translate(-((Math.random()*256)|0), -((Math.random()*256)|0));
-            ctx.fillStyle = grainFinePatternFor(ctx);
-            ctx.fillRect(0, 0, W + 256, H + 256);
+            ctx.translate(-((Math.random()*fineSize)|0), -((Math.random()*fineSize)|0));
+            ctx.fillStyle = grainPatternFor(ctx, fineSize, gBlock);
+            ctx.fillRect(0, 0, W + fineSize, H + fineSize);
         }
         ctx.restore();
     }
 }
 
 /* ================= 主循环 ================= */
-function tick(){
+/* 手机摄像头基本是 30fps，按 60fps 重绘等于把每帧的胶片处理和合成做两遍，
+   发热和耗电都会翻倍。这里把处理节奏压到约 30fps。 */
+let lastTickTs = 0;
+function tick(ts){
     requestAnimationFrame(tick);
+    if (ts && ts - lastTickTs < 32) return;
+    if (ts) lastTickTs = ts;
 
     const live = (mode === 'camera' && videoReady);
     const redraw = live || needsPixel;
@@ -1439,8 +1520,9 @@ async function startCamera(opts){
         return;
     }
 
-    // 采样分辨率高一点，最大变焦裁切后仍有足够细节喂给 384×288 的像素画布
-    const size = { width: { ideal: 1920 }, height: { ideal: 1440 } };
+    // 1280×960 足够喂给 384×288 的像素画布（3 倍变焦裁切后仍有 427 宽），
+    // 比 1920×1440 省电；帧率按 30 请求，避免摄像头跑 60fps 白烧电
+    const size = { width: { ideal: 1280 }, height: { ideal: 960 }, frameRate: { ideal: 30 } };
     try{
         try{
             const c = wantDevice
@@ -1564,7 +1646,7 @@ function switchToPhoto(img){
     updateModeUI();
     hideEmpty();
     needsPixel = true;
-    toast('已载入照片 · 可缩放平移');
+    toast('已载入照片 · 拍照按原图分辨率导出', 2200);
 }
 
 /* ================= 拍照 ================= */
@@ -1574,8 +1656,121 @@ function flashScreen(){
     flashEl.classList.add('go');
 }
 
+/* 高清导出：导入照片按源图分辨率套胶片处理，不做像素化、不放大。
+   取景构图（cover 裁切、缩放、平移）沿用取景器里的同一套几何。 */
+const MAX_HD = 4096;
+
+function frameRect(src){
+    const base = Math.max(PIX_W / src.w, PIX_H / src.h);
+    const dw = src.w * base * zoom;
+    const dh = src.h * base * zoom;
+    const maxDX = Math.max(0, dw - PIX_W);
+    const maxDY = Math.max(0, dh - PIX_H);
+    let dx = -maxDX / 2 + (panX * maxDX) / 2;
+    let dy = -maxDY / 2 + (panY * maxDY) / 2;
+    dx = clamp(dx, -maxDX, 0);
+    dy = clamp(dy, -maxDY, 0);
+    return { dw:dw, dh:dh, dx:dx, dy:dy };
+}
+
+function exportHD(){
+    if (hdBusy) return;
+    const src = getSource();
+    if (!src || !src.w || !src.h){ toast('画面还没准备好'); return; }
+
+    const f = frameRect(src);
+    const sx = -f.dx * src.w / f.dw;
+    const sy = -f.dy * src.h / f.dh;
+    const sw = PIX_W * src.w / f.dw;
+    const sh = PIX_H * src.h / f.dh;
+    let W = Math.max(1, Math.round(sw));
+    let H = Math.max(1, Math.round(sh));
+    // 超大图（如 4800 万像素原图）等比压到 4096，避免手机画布内存爆掉
+    if (W > MAX_HD || H > MAX_HD){
+        const k = MAX_HD / Math.max(W, H);
+        W = Math.max(1, Math.round(W * k));
+        H = Math.max(1, Math.round(H * k));
+    }
+
+    hdBusy = true;
+    toast('正在导出高清照片 ' + W + '×' + H + '…', 8000);
+    // 先让 toast 画出来，再做同步的逐像素处理
+    setTimeout(function(){ gradeHD(src.el, sx, sy, sw, sh, W, H); }, 30);
+}
+
+function gradeHD(el, sx, sy, sw, sh, W, H){
+    const st = STOCKS[stockIndex];
+    let c = null;
+    try {
+        c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d', { willReadFrequently:true });
+        if (!ctx) throw new Error('无法创建画布');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(el, sx, sy, sw, sh, 0, 0, W, H);
+
+        if (st.key !== 'none'){
+            const img = ctx.getImageData(0, 0, W, H);
+            const hs = makeHaloSet(W, H);
+            applyStock(img.data, st, hs);
+            ctx.putImageData(img, 0, 0);
+            if (hs.on && st.halation && st.halation.amount > 0){
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+                ctx.imageSmoothingEnabled = true;
+                ctx.globalAlpha = st.halation.amount * 0.5;
+                ctx.drawImage(hs.wideCv, 0, 0, W, H);
+                ctx.globalAlpha = st.halation.amount;
+                ctx.drawImage(hs.blurCv, 0, 0, W, H);
+                ctx.restore();
+            }
+        }
+
+        // 只保留胶片颗粒，不加扫描线 / 暗角 / 时间戳
+        const gs = st.grain || 0;
+        const coarseA = Math.min(0.45, gs * 0.20);
+        const fineA = Math.min(0.50, gs * 0.26);
+        if (coarseA > 0.005 || fineA > 0.005){
+            const gBlock = Math.max(1, Math.round(W / 480));
+            const fineSize = gBlock > 2 ? 512 : 256;
+            const coarseSize = gBlock > 2 ? 256 : 128;
+            ctx.save();
+            ctx.globalCompositeOperation = 'overlay';
+            if (coarseA > 0.005){
+                ctx.globalAlpha = coarseA;
+                ctx.translate(-((Math.random()*coarseSize)|0), -((Math.random()*coarseSize)|0));
+                ctx.fillStyle = grainPatternFor(ctx, coarseSize, gBlock * 2);
+                ctx.fillRect(0, 0, W + coarseSize, H + coarseSize);
+            }
+            if (fineA > 0.005){
+                ctx.globalAlpha = fineA;
+                ctx.translate(-((Math.random()*fineSize)|0), -((Math.random()*fineSize)|0));
+                ctx.fillStyle = grainPatternFor(ctx, fineSize, gBlock);
+                ctx.fillRect(0, 0, W + fineSize, H + fineSize);
+            }
+            ctx.restore();
+        }
+    } catch(e){
+        hdBusy = false;
+        toast('高清导出失败：' + (e && e.message ? e.message : '手机内存不足'), 3000);
+        return;
+    }
+
+    c.toBlob(function(blob){
+        hdBusy = false;
+        if (!blob){ toast('保存失败'); return; }
+        download(blob, 'DV301_HD_' + fileStamp() + '.png');
+        flashScreen();
+        haptic(16);
+        toast('已保存高清照片 ' + W + '×' + H, 2600);
+    }, 'image/png');
+}
+
 function shutter(){
     if (!hasFrame){ toast('画面还没准备好'); return; }
+    // 导入的照片直接按原图分辨率导出，不做像素化
+    if (mode === 'photo'){ exportHD(); return; }
 
     const W = EXPORT_W;
     const H = Math.round(EXPORT_W * PIX_H / PIX_W);
@@ -1838,6 +2033,7 @@ function setPixelLevel(i){
     pixelCv.height = PIX_H;
     recCv.width = PIX_W * 4;
     recCv.height = PIX_H * 4;
+    haloSet = makeHaloSet(PIX_W, PIX_H);
     pixLabel.textContent = lv.name;
     needsPixel = true;
     toast('像素 ' + lv.name + ' · ' + lv.w + '×' + lv.h, 1200);
